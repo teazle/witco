@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "node scripts/set-env.js && npm run build -- --configuration production",
+  "buildCommand": "NODE_OPTIONS=--openssl-legacy-provider node scripts/set-env.js && NODE_OPTIONS=--openssl-legacy-provider npm run build -- --configuration production",
   "outputDirectory": "dist",
   "framework": null,
   "installCommand": "npm install --legacy-peer-deps",
