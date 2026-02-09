@@ -10,6 +10,12 @@ $headingfont:'Poppins', sans-serif;
 
 @import '~@angular/material/theming';
 
+// Material core must be included before any component themes.
+$custom-typography: mat-typography-config(
+  $font-family: 'Poppins'
+);
+@include mat-core($custom-typography);
+
 /*Material Theme Colors*/
 
 $primary: mat-palette($mat-blue, 600);

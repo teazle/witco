@@ -22,7 +22,11 @@ export class AuthService {
   localDataValuesChange: Subject<any> = new Subject<any>();
   private second = new Subject<any>();
   second$ = this.second.asObservable();
-  pdfUrl: string = 'https://witco.s3.ap-southeast-1.amazonaws.com';
+  // Base URL for uploads (proof/invoice). Use backend so it can redirect to
+  // signed Blob/S3 URLs when buckets are private.
+  pdfUrl: string = (environment.apiUrl && environment.apiUrl.trim())
+    ? environment.apiUrl.replace(/\/$/, '')
+    : '';
   baseUrl: string = (environment.apiUrl && environment.apiUrl.trim())
     ? (environment.apiUrl.replace(/\/$/, '') + '/api/v1/')
     : 'api/v1/';
