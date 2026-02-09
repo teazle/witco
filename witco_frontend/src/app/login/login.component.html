@@ -21,10 +21,10 @@
         </mat-form-field>
 
         <mat-form-field class="example-full-width">
-          <div class="password">
-            <input matInput formControlName = "password" type="{{showPassword ? 'text' : 'password' }}" placeholder="Password" autocomplete="off">
-            <mat-icon (click)="togglePasswordVisibility()">{{showPassword ? 'visibility': 'visibility_off'}}</mat-icon>
-          </div>
+          <input matInput formControlName="password" [type]="showPassword ? 'text' : 'password'" placeholder="Password" autocomplete="off">
+          <button mat-icon-button matSuffix type="button" (click)="togglePasswordVisibility()" aria-label="Toggle password visibility">
+            <mat-icon>{{showPassword ? 'visibility': 'visibility_off'}}</mat-icon>
+          </button>
           <mat-error *ngIf="loginFormErrors.password.required">
                         password is required
                     </mat-error>

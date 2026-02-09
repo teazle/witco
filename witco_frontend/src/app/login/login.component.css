@@ -10,6 +10,13 @@ mat-card.box{
 mat-card-content{
     margin-bottom: 0;
 }
+.example-form .mat-form-field{
+    display: block;
+    margin-bottom: 16px;
+}
+.example-form .mat-form-field:last-of-type{
+    margin-bottom: 0;
+}
 button{
     cursor: pointer;
 }
@@ -55,17 +62,4 @@ img{
     width: 100%;
 }
 
-.password{
-    position: relative;
-    display: flex;
-    align-items: center;
-}
-.password mat-icon{
-    position: absolute;
-    cursor: pointer;
-    right: 0;
-    align-items: center;
-}
-.password input{
-    width: 93%;
-}
+/* matSuffix handles the password icon positioning */
