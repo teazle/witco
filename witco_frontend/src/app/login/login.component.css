@@ -1,0 +1,71 @@
+mat-card-title h2{
+    font-size: 25px;
+    text-align: center;
+    color: #41419e;
+}
+mat-card.box{
+    position: absolute;
+    top:145px;
+}
+mat-card-content{
+    margin-bottom: 0;
+}
+button{
+    cursor: pointer;
+}
+.btn-block{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.mat-card-header-text{
+	width:100%;
+}
+.mat-card{
+    box-shadow: 5px 5px 5px 5px #41419e !important;
+}
+
+.header_login{
+    height:64px;
+    width:100%;
+    background-color: #41419e;
+}
+.dark-logo{
+    width: 200px;
+    padding-top: 7px;
+    padding-bottom: 7px;
+    display: block;
+    margin: 0 auto;
+}
+
+.header{
+    font-size: 25px;
+    text-align: center;
+    color: #41419e;
+    font-weight: 300;
+}
+
+.header-title{
+    text-align: center;
+}
+
+img{
+    height: 66px;
+    width: 100%;
+}
+
+.password{
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+.password mat-icon{
+    position: absolute;
+    cursor: pointer;
+    right: 0;
+    align-items: center;
+}
+.password input{
+    width: 93%;
+}

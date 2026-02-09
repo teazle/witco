@@ -1,0 +1,149 @@
+.goods-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+}
+
+.goods-box {
+    position: relative;
+    display: flex;
+    gap: 8px;
+    margin-right: 12px;
+
+    .good-fild-1 {
+        width: 75%;
+    }
+    .good-fild-2{
+        width: 25%;
+    }
+}
+
+.btn {
+    display: flex;
+    gap: 8px;
+}
+
+.driverSearchHeader {
+    display: flex;
+    gap: 14px;
+    align-items: baseline;
+
+    & mat-form-field {
+        width: 24% !important;
+    }
+}
+
+.driverDetails {
+    background: cadetblue;
+    width: 50%;
+    border-radius: 8px;
+    margin: 46px auto;
+}
+
+/* .delete{
+    position: absolute;
+} */
+.good-main-box {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+mat-icon {
+    cursor: pointer;
+}
+
+.error {
+    color: red;
+}
+
+.error::before {
+    content: '*';
+}
+
+.search-box {
+    width: 50%;
+    margin: 20px auto;
+    border-radius: 6px;
+    position: absolute;
+    margin: 24px;
+    z-index: 999;
+}
+
+.search-input {
+    font-size: 16px;
+    width: 100%;
+    padding: 12px 6px 12px 38px;
+    border-bottom: 2px solid #999;
+    border-left: none;
+    border-right: none;
+    border-top: none;
+    background-color: whitesmoke;
+}
+
+mat-list {
+    max-height: 156px !important;
+    overflow-x: auto;
+    background-color: whitesmoke;
+}
+mat-list-item {
+    width: 100%;
+    cursor: pointer;
+    margin-bottom: 4px;
+    height: 34px !important;
+    font-size: 12px !important;
+    border-bottom: 2px solid #999;
+}
+.search-input-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.search-icon {
+    position: absolute;
+    left: 10px;
+}
+::-webkit-scrollbar {
+    width: 5px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #999;
+    border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+.customer-card{
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    /* justify-content: center; */
+    flex-direction: column;
+}
+mat-card-content{
+    width: 99%;
+    padding: 48px 18px!important;
+}
+mat-error{
+    width: 100%;
+}
+
+.phoneFild{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.phoneFild :first-child{
+    width: 140px;
+}
+

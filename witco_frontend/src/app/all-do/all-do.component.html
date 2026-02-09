@@ -1,0 +1,270 @@
+<mat-card >
+    <div class="header">
+        <mat-form-field  appearance="outline" 
+        color="accent"
+         >
+            <mat-label>Filter</mat-label>
+            <input
+              type="text"
+              placeholder="Driver Name"
+              aria-label="Number"
+              matInput
+              [(ngModel)]="driverInputValue"
+              [formControl]="myControl"
+              [matAutocomplete]="auto"
+              (click)="filterByDriver()"
+            />
+            <mat-autocomplete autoActiveFirstOption #auto="matAutocomplete">
+                <mat-option
+                  [value]="item"
+                  *ngFor="let item of filteredOptions | async"
+                  >{{ item }}
+                </mat-option>
+              </mat-autocomplete>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline"  (click)="inTimeCalendar.open()">
+            <mat-label>From Date</mat-label>
+            <input #fromInput matInput [matDatepicker]="inTimeCalendar" [max]="toDay" [(ngModel)]="fromDate" readonly>
+            <mat-datepicker-toggle matSuffix [for]="inTimeCalendar"></mat-datepicker-toggle>
+            <mat-datepicker #inTimeCalendar></mat-datepicker>
+        </mat-form-field>  
+        <mat-form-field appearance="outline"  (click)="outTimeCalendar.open()">
+            <mat-label>To Date</mat-label>
+            <input #toInput matInput [matDatepicker]="outTimeCalendar" [min]="fromDate" [max]="toDay" [(ngModel)]="toDate" readonly>
+            <mat-datepicker-toggle matSuffix [for]="outTimeCalendar"></mat-datepicker-toggle>
+            <mat-datepicker #outTimeCalendar></mat-datepicker>
+        </mat-form-field>  
+        
+        <button
+            class="search-btn"
+            mat-flat-button
+            color="warn"
+            type="button"
+            (click)="searchJobs()"
+            [disabled]=" !driverInputValue ? (!fromDate || !toDate) ? true :false  :  (!fromDate && !toDate) ? false : (!fromDate || !toDate) ? true :false  "
+        >
+        Search
+        </button>
+        <button
+            class="reset-btn"
+            mat-flat-button
+            color="warn"
+            type="button"
+            (click)="resetFilters()"
+        >
+        Reset
+        </button>
+</div>
+</mat-card>
+<mat-card>
+    <mat-button-toggle-group name="fontStyle" class="toggle" aria-label="Font Style" [value]="selectedVal" [(ngModel)]="selectedVal">
+        <mat-button-toggle value="Delivering" (click)="deliveringOrder()">Delivering</mat-button-toggle>
+        <mat-button-toggle value="Delivered" (click)="delivered()">Delivered</mat-button-toggle>
+    </mat-button-toggle-group>
+</mat-card>
+<mat-card class="table">
+    <table mat-table [dataSource]="dataSource" class="mat-elevation-z8" *ngIf="dataSource.data.length > 0  && selectedVal == 'Delivering'"> 
+
+        <!-- Position Column -->
+        <ng-container matColumnDef="srno">
+            <th mat-header-cell *matHeaderCellDef class="r-5"> No. </th>
+            <td mat-cell *matCellDef="let element;let i=index" class="r-5"> {{i+1}} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="customer" > 
+            <th mat-header-cell *matHeaderCellDef  class="r-15">Customer Name </th>
+            <td mat-cell *matCellDef="let element" class="r-15"> {{element.customer_firstName}}  {{element.customer_lastName}} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="invoiceNumber" >
+            <th mat-header-cell *matHeaderCellDef class="r-15"> DO Number </th>
+            <td mat-cell *matCellDef="let element" class="r-15"> {{element.invoiceNumber}} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="inv_temp" >
+            <th mat-header-cell *matHeaderCellDef class="r-15"> PO Number </th>
+            <td mat-cell *matCellDef="let element" class="r-15"> {{element.inv_temp}} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="customer_companyName" >
+            <th mat-header-cell *matHeaderCellDef class="r-15"> Company Name </th>
+            <td mat-cell *matCellDef="let element" class="r-15"> {{element.customer_companyName}} </td>
+        </ng-container>
+        
+        <ng-container matColumnDef="deliveryAddress" >
+            <th mat-header-cell *matHeaderCellDef class="r-30"> Delivery Address </th>
+            <td mat-cell *matCellDef="let element" class="r-30"> {{element.deliveryAddress}} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="driver">
+            <th mat-header-cell *matHeaderCellDef class="r-15">driver Name </th>
+            <td mat-cell *matCellDef="let element" class="r-15"> {{element.driver_firstName}} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="driverEmail" >
+            <th mat-header-cell *matHeaderCellDef class="r-20"> Driver Email</th>
+            <td mat-cell *matCellDef="let element" class="r-20"> {{element.driver_email}} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="vehicleNumber" >
+            <th mat-header-cell *matHeaderCellDef class="r-15"> Vehicle Number </th>
+            <td mat-cell *matCellDef="let element" class="r-15"> {{element.driver_vehicleNumber}} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="Date">
+            <th mat-header-cell *matHeaderCellDef class="r-10"> Date </th>
+            <td mat-cell *matCellDef="let element" class="r-10" > {{element.createdAt | date : 'dd-MM-yyyy' : 'UTC'}} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="action">
+            <th mat-header-cell *matHeaderCellDef class="r-10 edit-driver">Edit Driver </th>
+            <td mat-cell *matCellDef="let element" class="r-10 edit-driver">
+                <div *ngIf="selectedVal == 'Delivering' ">
+                    <mat-icon (click)="editDriver(driver)" color="primary">edit</mat-icon>
+                    <ng-template #driver>
+                        <h1 mat-dialog-title class="text-center">Edit Driver</h1>
+                        <mat-divider></mat-divider>
+                        <div mat-dialog-content class="option-driver">
+                            <mat-form-field>
+                                <mat-label>Choose an Driver</mat-label>
+                                <mat-select [(ngModel)]="selectedDriver">
+                                    <mat-option [value]="driver" *ngFor="let driver of driverOption">{{driver}}</mat-option>
+                                </mat-select>
+                            </mat-form-field>
+                        </div>
+                        <div mat-dialog-actions  class="btn">
+                            <button mat-button mat-dialog-close cdkFocusInitial (click)="onEditDriver(element)"  color="primary" [disabled]="!selectedDriver">Save</button>
+                        </div>
+                    </ng-template>
+                </div>
+            </td>
+        </ng-container>
+
+        <ng-container matColumnDef="editJob">
+            <th mat-header-cell *matHeaderCellDef class="r-10 ">Edit Job </th>
+            <td mat-cell *matCellDef="let element" class="r-10">
+                <div class="action">
+                    <mat-icon (click)="editJob(element._id)" color="primary">edit</mat-icon>
+                    <button mat-button class="btn" data-toggle="tooltip" title="Delete!"
+                    (click)="deleteJob(element._id)">
+                    <mat-icon color="warn">delete</mat-icon>
+                </button>
+            </div>
+            </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+    
+      </table>
+
+      <table mat-table [dataSource]="dataSource" class="mat-elevation-z8" *ngIf="dataSource.data.length > 0 && selectedVal == 'Delivered'"> 
+
+        <!-- Position Column -->
+        <ng-container matColumnDef="srno">
+            <th mat-header-cell *matHeaderCellDef class="r-5"> No. </th>
+            <td mat-cell *matCellDef="let element;let i=index" class="r-5"> {{i+1}} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="invoice_no">
+            <th mat-header-cell *matHeaderCellDef class="r-15">Invoice Number</th>
+            <td mat-cell *matCellDef="let element" class="r-15">
+                <mat-form-field class="invoice" appearance="outline">
+                <input matInput [(ngModel)]="element.invoice_no"   (ngModelChange)="invoiceUpdate(element.invoice_no, element._id)">
+                </mat-form-field>
+            </td>
+        </ng-container>
+
+        <ng-container matColumnDef="customer" > 
+            <th mat-header-cell *matHeaderCellDef  class="r-15">Customer Name </th>
+            <td mat-cell *matCellDef="let element" class="r-15"> {{element.customer_firstName}}  {{element.customer_lastName}}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="invoiceNumber" >
+            <th mat-header-cell *matHeaderCellDef class="r-15"> DO Number </th>
+            <td mat-cell *matCellDef="let element" class="r-15"> {{element.invoiceNumber}} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="inv_temp" >
+            <th mat-header-cell *matHeaderCellDef class="r-15"> PO Number </th>
+            <td mat-cell *matCellDef="let element" class="r-15"> {{element.inv_temp}} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="customer_companyName" >
+            <th mat-header-cell *matHeaderCellDef class="r-15"> Company Name </th>
+            <td mat-cell *matCellDef="let element" class="r-15"> {{element.customer_companyName}} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="deliveryAddress" >
+            <th mat-header-cell *matHeaderCellDef class="r-30"> Delivery Address </th>
+            <td mat-cell *matCellDef="let element" class="r-30"> {{element.deliveryAddress}} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="driver">
+            <th mat-header-cell *matHeaderCellDef class="r-15">driver Name </th>
+            <td mat-cell *matCellDef="let element" class="r-15"> {{element.driver_firstName}} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="driverEmail" >
+            <th mat-header-cell *matHeaderCellDef class="r-20"> Driver Email</th>
+            <td mat-cell *matCellDef="let element" class="r-20"> {{element.driver_email}} </td>
+        </ng-container>
+
+        <ng-container matColumnDef="vehicleNumber" >
+            <th mat-header-cell *matHeaderCellDef class="r-15"> Vehicle Number </th>
+            <td mat-cell *matCellDef="let element" class="r-15"> {{element.driver_vehicleNumber}} </td>
+        </ng-container>
+
+
+        <ng-container matColumnDef="DeliveryDate">
+            <th mat-header-cell *matHeaderCellDef class="r-15"> Delivery Date </th>
+            <td mat-cell *matCellDef="let element" class="r-15"> {{element.delivery_time | date : 'dd-MM-yyyy' : 'UTC'}}  {{element.delivery_time | date : 'hh:mm' : 'UTC'}} </td>
+        </ng-container>
+      
+        <!-- <ng-container matColumnDef="paymentStatus">
+            <th mat-header-cell *matHeaderCellDef class="r-10"> Payment Status </th>
+            <td mat-cell *matCellDef="let element" [ngClass]="element.paid == true ? 'paid' :'unpaid' " class="r-10"><a> {{element.paid == true ? 'Paid' : 'Unpaid'}} </a></td>
+        </ng-container> -->
+    
+        <ng-container matColumnDef="action">
+            <th mat-header-cell *matHeaderCellDef class="r-5">Location</th>
+            <td mat-cell *matCellDef="let element" class="r-5">
+                <button mat-button class="location" data-toggle="tooltip" title="Locatin" color="warn">
+                    <mat-icon (click)="openlocation(element.map_pinpoint_delivery)">location_on</mat-icon>
+                </button>
+            </td>
+        </ng-container>
+
+        <ng-container matColumnDef="pdf">
+            <th mat-header-cell *matHeaderCellDef > Proof Pdf </th>
+            <td mat-cell *matCellDef="let element">
+                <button mat-button class="location" data-toggle="tooltip" title="Downloas Proof Pdf" color="primary">
+                    <mat-icon (click)="openPdf(element.do_number)">picture_as_pdf</mat-icon>
+                </button>
+            </td>
+        </ng-container>
+        <ng-container matColumnDef="invoice">
+            <th mat-header-cell *matHeaderCellDef > Invoice </th>
+            <td mat-cell *matCellDef="let element">
+                <button mat-button class="location" data-toggle="tooltip" title="Download Invoice Pdf" color="primary">
+                    <mat-icon (click)="openInvoice(element)">receipt</mat-icon>
+                </button>
+            </td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="displayedColumnsDelivered"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumnsDelivered;"></tr>
+    
+      </table>
+      <div class="no-data">
+        <h2  class="text-center" *ngIf="dataSource.data.length < 1">No Data Available</h2>
+      </div>
+      <mat-paginator [length]="length"
+              [pageSize]="pageSize"
+              [pageSizeOptions]="pageSizeOptions"
+              [pageIndex]="currentPage"
+              aria-label="Select page"
+              (page)="handlePageEvent($event)"
+              >
+</mat-paginator>
+</mat-card>

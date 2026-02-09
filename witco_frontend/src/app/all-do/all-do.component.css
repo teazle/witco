@@ -1,0 +1,104 @@
+.toggle{
+    padding: 10px;
+    display: flex;
+    justify-content: center;
+    border-radius: 6px;
+}
+.table{
+    width: 96.5%;
+    overflow-x: auto;
+    & thead{
+        white-space: nowrap;
+    }
+}
+.edit-driver{
+    text-align: center;
+}
+.search-btn{
+  background-color: #41419e;
+}
+.mat-button-toggle-checked{
+    background-color: #41419e!important;
+    color: #FFFFFF;
+}
+.header{
+    display: flex;   
+    gap: 14px;
+    justify-content: flex-start;
+    align-items: baseline;
+    padding-top: 18px!important;
+    padding-left: 12px!important;
+}
+.action{
+    display: flex;
+    align-items: center;
+}
+mat-button-toggle-group{
+border-radius: 4px; 
+}
+mat-form-field{
+    width: 260px;
+}
+mat-form-field.invoice{
+    width: 150px;
+    margin-right: 20px;
+}
+.header mat-form-field {
+    width: 177px;
+}
+@media only screen and (max-width: 1024px) {
+    mat-form-field{
+        width: 180px!important;
+    }
+    .table{
+        width: 96%;
+    }
+}
+@media only screen and (max-width: 878px) {
+    mat-form-field{
+        width: 160px!important;
+    }
+}
+.no-data{
+    text-align: center;
+    padding: 20px 12px ;
+}
+mat-icon{
+    cursor: pointer;
+}
+.option-driver{
+    margin: 18px 0px;
+}
+.r-5{
+    min-width: 50px;
+}
+.r-10{
+    min-width: 100px;
+}
+.r-15{
+    min-width: 150px;
+}
+.r-20{
+    min-width: 210px;
+}
+.r-30{
+    min-width: 310px;
+    max-width: 324px;
+}
+.pdf-delivering{
+    display: none;
+}
+
+.unpaid{
+    text-align: center;
+    color: red;
+}
+.paid{
+    text-align: center;
+    color: green;
+}
+
+table{
+    width: 100%!important;
+}
+

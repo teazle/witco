@@ -1,0 +1,199 @@
+<mat-card>
+    <mat-horizontal-stepper #stepper linear>
+        <mat-step [stepControl]="customerForm">
+            <ng-template matStepLabel>Fill out customer Form</ng-template>
+            <div class="main">
+                <mat-card class="customer-card">
+                    <div *ngIf="searchformdisplay" class="search-box">
+                        <div class="search-input-box">
+                            <input [(ngModel)]="searchTerm" placeholder="Search Existing Customer" #search class="search-input"> 
+                            <mat-icon class="search-icon" color="primary">search</mat-icon>
+                        </div>
+                        <mat-list role="list" *ngIf="filteredItems.length != 0" class="search-list">
+                            <mat-list-item role="listitem" *ngFor="let item of filteredItems" (click)="setForm(item)">{{
+                                item.firstName }}
+                                {{item.lastName}} {{item.companyName}}
+                            </mat-list-item>
+                        </mat-list>
+                    </div>
+                    <mat-card-content>
+                        <div class="wrapper">
+                            <form class="example-form" [formGroup]="customerForm" (ngSubmit)="onSubmit()">
+                                <mat-card-content>
+                                    <mat-form-field class="example-full-width">
+                                        <input matInput formControlName="firstName" placeholder="First Name"
+                                            autocomplete="off">
+
+                                    </mat-form-field>
+                                    <div
+                                        *ngIf="customerForm.get('firstName').invalid && (customerForm.get('firstName').dirty || customerForm.get('firstName').touched)">
+                                        <mat-error *ngIf=" customerForm.get('firstName').hasError('required')">
+                                            First Name is Required!
+                                        </mat-error>
+                                        <mat-error *ngIf="customerForm.get('firstName').hasError('pattern')">
+                                            First Name is invalid.
+                                        </mat-error>
+                                    </div>
+                                    <mat-form-field class="example-full-width">
+                                        <input matInput formControlName="lastName" placeholder="Last Name"
+                                            autocomplete="off">
+                                    </mat-form-field>
+                                    <div
+                                        *ngIf="customerForm.get('lastName').dirty || customerForm.get('lastName').touched">
+                                        <mat-error *ngIf="customerForm.get('lastName').hasError('pattern')">
+                                            Last Name is invalid.
+                                        </mat-error>
+                                    </div>
+                                    <mat-form-field class="example-full-width">
+                                        <input matInput formControlName="companyName" placeholder="Company Name"
+                                            autocomplete="off">
+                                    </mat-form-field>
+                                    <mat-form-field class="example-full-width">
+                                        <input matInput formControlName="email" placeholder="Email" autocomplete="off">
+                                    </mat-form-field>
+                                    <div *ngIf="customerForm.get('email').dirty || customerForm.get('email').touched">
+                                        <mat-error *ngIf="customerForm.get('email').hasError('pattern')">
+                                            Email is invalid.
+                                        </mat-error>
+                                    </div>
+                                    <div class="phoneFild">
+                                        <mat-form-field>
+                                            <mat-label> country code</mat-label>
+                                            <mat-select formControlName="code">
+                                                <mat-option value="+65">
+                                                    +65
+                                                </mat-option>
+                                            </mat-select>
+                                        </mat-form-field>
+                                        <mat-form-field class="example-full-width">
+                                            <input matInput formControlName="phone" class="phoneNumber"
+                                            placeholder="Phone Number" autocomplete="off" min-length="8" max-length="8">
+                                        </mat-form-field>
+                                    </div>
+                                    <div
+                                        *ngIf="customerForm.get('phone').invalid && (customerForm.get('phone').dirty || customerForm.get('phone').touched)">
+                                        <mat-error *ngIf="customerForm.get('phone').hasError('required')">
+                                            Number Is Required!
+                                        </mat-error>
+
+                                        <mat-error *ngIf="customerForm.get('phone').hasError('pattern')">
+                                            Phone number only contain 8 number
+                                        </mat-error>
+                                    </div>
+
+                                    <mat-form-field class="example-full-width">
+                                        <input matInput formControlName="address" placeholder="Address" type="text"
+                                            autocomplete="off">
+                                    </mat-form-field>
+                                    <mat-form-field class="example-full-width" *ngIf="false">
+                                        <input matInput formControlName="userRole" placeholder="userRole" type="text"
+                                            autocomplete="off">
+                                    </mat-form-field>
+                                </mat-card-content>
+                                <div class="btn">
+                                    <button mat-raised-button color="primary" type="submit"
+                                        *ngIf="!searchCustomer" [disabled]="show ? customerForm?.invalid || !areFormControlsSame() : areFormControlsSame()">{{!searchCustomer? 'save' : 'update'}}</button>
+                                    <button mat-raised-button color="primary" type="button" matStepperNext
+                                        [disabled]="show ? !areFormControlsSame() || saveCustomerDetails  : changeInputBool ?  !areFormControlsSame() : !changetext">next</button>
+                                </div>
+                            </form>
+                        </div>
+                    </mat-card-content>
+                </mat-card>
+            </div>
+        </mat-step>
+        <mat-step [stepControl]="goodsForm">
+            <ng-template matStepLabel>Fill out Goods Form</ng-template>
+            <form class="example-form" [formGroup]="goodsForm" (ngSubmit)="onsubmitGood()">
+                <mat-card-content>
+                    <mat-form-field class="example-full-width">
+                        <input matInput formControlName="inv_temp" placeholder="PO Number" autocomplete="off">
+                    </mat-form-field>
+                  
+                    <mat-form-field class="example-full-width">
+                        <input matInput formControlName="invoiceNumber" placeholder="DO Number" autocomplete="off">
+                    </mat-form-field>
+                    <div
+                        *ngIf="goodsForm.get('invoiceNumber').invalid && (goodsForm.get('invoiceNumber').dirty || goodsForm.get('invoiceNumber').touched)">
+                        <mat-error *ngIf="goodsForm.get('invoiceNumber').hasError('required')">
+                            DO Number is Required!
+                        </mat-error>
+                    </div>
+                    <mat-form-field class="example-full-width">
+                        <input matInput formControlName="deliveryAddress" placeholder="Delivery Address"
+                            autocomplete="off">
+                    </mat-form-field>
+                    <div
+                        *ngIf="goodsForm.get('deliveryAddress').invalid && (goodsForm.get('deliveryAddress').dirty || goodsForm.get('deliveryAddress').touched)">
+                        <mat-error *ngIf="goodsForm.get('deliveryAddress').hasError('required')">
+                            Delivery Address is Required!
+                        </mat-error>
+                    </div>
+                    <mat-form-field class="example-full-width">
+                        <input matInput formControlName="zipcode" placeholder="Zip Code"
+                            autocomplete="off">
+                    </mat-form-field>
+                    <div
+                    *ngIf="goodsForm.get('zipcode').invalid && (goodsForm.get('zipcode').dirty || goodsForm.get('zipcode').touched)">
+
+                    <mat-error *ngIf="goodsForm.get('zipcode').hasError('required')">
+                        Zipcode is Required!
+                    </mat-error>
+
+                    <mat-error *ngIf="goodsForm.get('zipcode').hasError('pattern')">
+                        zipcode only contain 6 digit!
+                    </mat-error>
+                    </div>
+
+                    <div class="goods-header">
+                        <h3>Add Good</h3>
+                        <button mat-raised-button color="primary" type="button" (click)="addGoods()">Add Goods</button>
+                    </div>
+                    <ng-container formArrayName="goods">
+                        <ng-container *ngFor="let good of goods.controls;let i=index">
+                            <div class="good-main-box">
+                                <div [formGroupName]="i" class="goods-box">
+                                    <mat-form-field class="example-full-width good-fild-1">
+                                        <input matInput formControlName="goodsName" placeholder="Goods Name"
+                                            autocomplete="off">
+                                    </mat-form-field>
+
+                                    <mat-form-field class="example-full-width good-fild-2">
+
+                                        <input matInput formControlName="quantity" placeholder="Quantity"
+                                            autocomplete="off" type="text">
+                                            
+                                        <mat-error *ngIf="good.get('quantity').hasError('pattern')">
+                                                Invalid Quantity.
+                                        </mat-error>
+                                        <mat-error *ngIf="good.get('quantity').hasError('required')">
+                                                Quantity is Required.
+                                        </mat-error>
+                                    </mat-form-field>
+                                    
+                                    <!-- <mat-form-field class="example-full-width good-fild">
+                                        <input matInput formControlName="unitPrice" placeholder="Unit Price"
+                                            autocomplete="off" type="text">
+                                        <mat-error *ngIf="good.get('unitPrice').hasError('pattern')">
+                                                Invalid Unit Price.
+                                        </mat-error>
+                                        <mat-error *ngIf="good.get('unitPrice').hasError('required')">
+                                                Unit Price is Required.
+                                        </mat-error>
+                                    </mat-form-field> -->
+                                </div>
+                                <div class="delete">
+                                    <mat-icon (click)="removeGood(i)">delete</mat-icon>
+                                </div>
+                            </div>
+                        </ng-container>
+                    </ng-container>
+                </mat-card-content>
+                <div class="btn">
+                    <button mat-raised-button color="primary" type="submit"
+                        [disabled]="goodsForm?.invalid">submit</button>
+                </div>
+            </form>
+        </mat-step>
+    </mat-horizontal-stepper>
+</mat-card>

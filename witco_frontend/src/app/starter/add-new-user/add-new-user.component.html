@@ -1,0 +1,96 @@
+<h1>{{title}}</h1>
+<div class="main">
+    <mat-card>
+        <mat-card-content>
+            <div class="wrapper">
+                <form class="example-form" [formGroup]="userForm" (ngSubmit)="onSubmit()">
+                    <mat-card-content>
+                        <mat-form-field class="example-full-width">
+                            <input matInput formControlName="firstName" placeholder="First Name" autocomplete="off">
+                        </mat-form-field>
+                        <div *ngIf="userForm.get('firstName').invalid && (userForm.get('firstName').dirty || userForm.get('firstName').touched)">
+                            <mat-error *ngIf=" userForm.get('firstName').hasError('required')">
+                                First Name is Required!
+                            </mat-error>
+                            <mat-error *ngIf="userForm.get('firstName').hasError('pattern')">
+                                First Name is invalid.
+                            </mat-error>
+                        </div>
+                        <mat-form-field class="example-full-width">
+                            <input matInput formControlName="lastName" placeholder="Last Name" autocomplete="off">
+                        </mat-form-field>
+                        <div *ngIf="(userForm.get('lastName').dirty || userForm.get('lastName').touched)">
+                            <mat-error *ngIf="userForm.get('lastName').hasError('pattern')">
+                                Last Name is invalid.
+                            </mat-error>
+                        </div>
+
+                        <mat-form-field class="example-full-width">
+                            <input matInput formControlName="email" placeholder="Email" autocomplete="off">
+                        </mat-form-field>
+                        <div *ngIf="userForm.get('email').invalid && (userForm.get('email').dirty || userForm.get('email').touched)">
+                            <mat-error *ngIf="userForm.get('email').hasError('required')">
+                                Email is Required!
+                            </mat-error>
+                            <mat-error *ngIf="userForm.get('email').hasError('pattern')">
+                                Email is invalid.
+                            </mat-error>
+                        </div>
+                        <mat-form-field class="example-full-width" *ngIf="show">
+                            <input matInput formControlName="password" type="password" placeholder="Password"
+                                autocomplete="off">
+                        </mat-form-field>
+                        <mat-error *ngIf="  (userForm.get('password').invalid && (userForm.get('password').dirty || userForm.get('password').touched)) && userForm.get('password').hasError('required')">
+                            Password is Required!
+                        </mat-error>
+
+                        <div class="phoneFild">
+                            <mat-form-field>
+                                <mat-label> country code</mat-label>
+                                <mat-select formControlName="code">
+                                    <mat-option value="+65">
+                                        +65
+                                    </mat-option>
+                                </mat-select>
+                            </mat-form-field>
+                            <mat-form-field class="example-full-width">
+                                <input matInput formControlName="phone" placeholder="Phone Number" type="text" max-length='20' autocomplete="off">
+                            </mat-form-field>
+                        </div>
+                            <div *ngIf="userForm.get('phone').invalid && (userForm.get('phone').dirty || userForm.get('phone').touched)"> 
+                            <mat-error *ngIf="userForm.get('phone').hasError('required')">
+                                Number Is Required!
+                            </mat-error>
+                            
+                            <mat-error *ngIf="userForm.get('phone').hasError('pattern')">
+                                Phone number only contain 8 number 
+                            </mat-error>
+                        </div>
+
+                        <!-- <mat-form-field class="example-full-width">
+                            <input matInput formControlName="address" placeholder="Address" type="text" autocomplete="off">
+                        </mat-form-field>
+                        <mat-error *ngIf="  (userForm.get('address').invalid && (userForm.get('address').dirty || userForm.get('address').touched)) && userForm.get('address').hasError('required')">
+                            Address is Required!
+                        </mat-error> -->
+                        <mat-form-field class="example-full-width">
+                            <input matInput formControlName="vehicleNumber" placeholder="Vehicle Number" type="text" max-length='20' autocomplete="off">
+                        </mat-form-field> 
+                        <!-- <mat-form-field class="example-full-width">
+                            <input matInput formControlName="licenceNumber" placeholder="Licence Number" type="text" max-length='20' autocomplete="off">
+                        </mat-form-field>
+                        <mat-error *ngIf="  (userForm.get('licenceNumber').invalid && (userForm.get('licenceNumber').dirty || userForm.get('licenceNumber').touched)) && userForm.get('licenceNumber').hasError('required')">
+                            Licence Number is Required!
+                        </mat-error> -->
+                        <mat-form-field class="example-full-width">
+                            <input matInput formControlName="governmentIDs" placeholder="NRIC/FIN Number" type="text" max-length='20' autocomplete="off">
+                        </mat-form-field>
+                    </mat-card-content>
+
+                    <button mat-raised-button color="primary" [disabled]="userForm.invalid">Submit</button>
+
+                </form>
+            </div> 
+        </mat-card-content>
+    </mat-card>
+</div>

@@ -1,0 +1,40 @@
+<div class="header_login">
+  <img src="../../assets/imgs/Logo.svg" alt="homepage" class="dark-logo">
+</div>
+<div class="login-wrapper" fxLayout="row" fxLayoutAlign="center center">
+  <mat-card class="box">
+    <mat-card-title>
+        <h2>Login</h2>
+    </mat-card-title>
+    
+
+    <form class="example-form" name="loginForm" [formGroup]="loginForm" (ngSubmit)="onSubmit(loginForm.value)" novalidate>
+      <mat-card-content>
+        <mat-form-field class="example-full-width">
+          <input matInput formControlName = "email" placeholder="Email" autocomplete="off">
+          <mat-error *ngIf="loginFormErrors.email.required">
+            Email is required
+          </mat-error>
+          <mat-error *ngIf="!loginFormErrors.email.required && loginFormErrors.email.email">
+            Please enter a valid email address
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field class="example-full-width">
+          <div class="password">
+            <input matInput formControlName = "password" type="{{showPassword ? 'text' : 'password' }}" placeholder="Password" autocomplete="off">
+            <mat-icon (click)="togglePasswordVisibility()">{{showPassword ? 'visibility': 'visibility_off'}}</mat-icon>
+          </div>
+          <mat-error *ngIf="loginFormErrors.password.required">
+                        password is required
+                    </mat-error>
+        </mat-form-field>
+      </mat-card-content>
+      <div class="btn-block" >
+        <button mat-raised-button color="primary" [disabled]="loginForm.invalid">Login</button>
+      </div>
+      <p fxLayoutAlign="center center" routerLink="/forget-password" style="cursor: pointer;">Forget Password ?</p>
+
+    </form>
+  </mat-card>
+</div>

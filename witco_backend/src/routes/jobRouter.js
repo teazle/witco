@@ -1,0 +1,19 @@
+const express = require("express");
+const router = express.Router();
+const JobController = require("../controllers/JobController");
+const UserController = require('../controllers/UserController');
+
+router.use(UserController.verifyJWT);
+router.post("/add", JobController.addJob);
+router.get("/getAll", JobController.getAllJob);
+router.get("/job-filter", JobController.jobFiltered);
+router.get("/get/:id", JobController.getJob);
+router.patch("/edit/:id", JobController.editJob);
+router.delete("/delete/:id", JobController.deleteJob);
+router.post("/add-delivery", JobController.addDo);
+router.post("/change-driver", JobController.changeDriver);
+// router.post("/payment-satus", JobController.paymentStatus);
+router.post("/delivered", JobController.delivered);
+router.post("/invoice", JobController.invoice);
+router.post("/updateInvoice", JobController.updateInvoice);
+module.exports = router;

@@ -1,0 +1,14 @@
+<mat-toolbar class="menu">
+
+    <mat-nav-list appAccordion>
+        <mat-list-item 
+        [class.selectedExtra]="isDeliverySubmit && item.name === 'Delivering'"
+        appAccordionLink *ngFor="let item of menuItem.getMenuitem()" routerLinkActive="selected" group="{{item.state}}">
+            <a class="menu-item" appAccordionToggle [routerLink]="['/', item.state]" *ngIf="item.type === 'link'">
+                <mat-icon>{{ item.icon }}</mat-icon>
+                <span>{{ item.name }}</span>
+            </a>
+        </mat-list-item>
+    </mat-nav-list>
+</mat-toolbar>
+<router-outlet></router-outlet>

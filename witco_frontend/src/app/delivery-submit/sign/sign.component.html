@@ -1,0 +1,10 @@
+<div>
+    <div class="pad">
+      <signature-pad [options]="signaturePadOptions" (onBeginEvent)="drawStart()" (onEndEvent)="drawComplete()"></signature-pad>
+      <div class="button">
+          <button  mat-raised-button color="primary" (click)="saveSignPad()">Save</button>
+          <button  mat-raised-button (click)="clearSignPad()">Clear</button>
+          <button  mat-raised-button (click)="back()">back</button>
+      </div>
+    </div>
+ </div>

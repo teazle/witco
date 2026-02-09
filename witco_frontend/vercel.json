@@ -1,0 +1,7 @@
+{
+  "version": 2,
+  "buildCommand": "npm run build -- --configuration production",
+  "outputDirectory": "dist",
+  "framework": null,
+  "installCommand": "npm install"
+}

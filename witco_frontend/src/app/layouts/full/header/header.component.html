@@ -1,0 +1,11 @@
+<!-- ============================================================== -->
+<!-- Profile - style you can find in header.scss -->
+<!-- ============================================================== -->
+<button [matMenuTriggerFor]="profile" mat-icon-button class="m-r-5 profilePhoto" >
+    <mat-icon>account_circle</mat-icon>
+</button>
+<mat-menu #profile="matMenu" class="mymegamenu" >
+    <button mat-menu-item (click)="onProfile()"><mat-icon >account_box</mat-icon> Profile </button>
+    <button mat-menu-item (click)="forgetPassword()"><mat-icon >lock_open</mat-icon> Reset Password </button>
+    <button mat-menu-item (click)="Logout()"><mat-icon >exit_to_app</mat-icon> Sign Out </button>
+</mat-menu>

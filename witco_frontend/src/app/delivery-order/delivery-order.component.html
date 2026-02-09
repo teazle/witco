@@ -1,0 +1,132 @@
+<mat-card>
+    <div class="header">
+        <div class="date-filter">
+            <mat-form-field appearance="outline" (click)="inTimeCalendar.open()">
+                <mat-label>From Date</mat-label>
+                <input #fromInput matInput [matDatepicker]="inTimeCalendar" [max]="toDay"  [(ngModel)]="fromDate" 
+                     readonly>
+                <mat-datepicker-toggle matSuffix [for]="inTimeCalendar"></mat-datepicker-toggle>
+                <mat-datepicker #inTimeCalendar></mat-datepicker>
+            </mat-form-field>
+            <mat-form-field appearance="outline" (click)="outTimeCalendar.open()">
+                <mat-label>To Date</mat-label>
+                <input #toInput matInput [matDatepicker]="outTimeCalendar" [min]="fromDate" [max]="toDay" [(ngModel)]="toDate"
+                     readonly>
+                <mat-datepicker-toggle matSuffix [for]="outTimeCalendar"></mat-datepicker-toggle>
+                <mat-datepicker #outTimeCalendar></mat-datepicker>
+            </mat-form-field>
+            <button class="search-btn" mat-flat-button color="warn" type="button" (click)="searchJobs()"
+                [disabled]="!fromDate || !toDate">
+                Search
+            </button>
+            <button class="reset-btn" mat-flat-button color="warn" type="button" (click)="resetFilters()">
+                Reset
+            </button>
+        </div>
+        <div>
+        </div>
+    </div>
+</mat-card>
+<mat-card class="table">
+    <div class="add-job">
+        <h5>All Jobs</h5>
+        <button class="reset-btn" mat-flat-button type="button" (click)="addJob()">
+            Add Jobs <mat-icon>add_comment</mat-icon>
+        </button>
+    </div>
+    <mat-card-content>
+        <table mat-table [dataSource]="dataSource" class="mat-elevation-z8" #table *ngIf="dataSource.data.length > 0">
+
+            <!-- selection Column -->
+            <ng-container matColumnDef="select">
+                <th mat-header-cell *matHeaderCellDef class="r-5"> Select </th>
+                <td mat-cell *matCellDef="let element" class="r-5">
+                    <mat-checkbox (change)="checkBoxvalue($event,element)"></mat-checkbox>
+                </td>
+            </ng-container>
+
+            <!-- Name Column -->
+            <ng-container matColumnDef="customer">
+                <th mat-header-cell *matHeaderCellDef class="r-15">Customer Name </th>
+                <td mat-cell *matCellDef="let element" class="r-15"> {{element.customer_firstName}} {{element.customer_lastName}} </td>
+            </ng-container>
+
+            <!-- Weight Column -->
+            <!-- <ng-container matColumnDef="do_number">
+                <th mat-header-cell *matHeaderCellDef class="r-15"> DO Number </th>
+                <td mat-cell *matCellDef="let element" class="r-15"> {{element.do_number}} </td>
+            </ng-container> -->
+
+            <!-- Symbol Column -->
+            <ng-container matColumnDef="invioceNumber">
+                <th mat-header-cell *matHeaderCellDef class="r-15"> DO Number </th>
+                <td mat-cell *matCellDef="let element" class="r-15"> {{element.invoiceNumber}} </td>
+            </ng-container>
+
+             <ng-container matColumnDef="inv_temp" >
+                <th mat-header-cell *matHeaderCellDef class="r-15"> PO Number </th>
+                <td mat-cell *matCellDef="let element" class="r-15"> {{element.inv_temp}} </td>
+            </ng-container>
+
+            <ng-container matColumnDef="customer_companyName" >
+                <th mat-header-cell *matHeaderCellDef class="r-15"> Company Name</th>
+                <td mat-cell *matCellDef="let element" class="r-15"> {{element.customer_companyName}} </td>
+            </ng-container>
+            <!-- Symbol Column -->
+            <ng-container matColumnDef="deliveryAddress" class="r-30">
+                <th mat-header-cell *matHeaderCellDef > Delivery Address </th>
+                <td mat-cell *matCellDef="let element" > {{element.deliveryAddress}} </td>
+            </ng-container>
+
+            <!-- Symbol Column -->
+            <ng-container matColumnDef="createdAt">
+                <th mat-header-cell *matHeaderCellDef class="r-10">Date</th>
+                <td mat-cell *matCellDef="let element" class="r-10"> {{element.createdAt | date : 'dd-MM-yyyy' : 'UTC'}}
+                </td>
+            </ng-container>
+
+            <ng-container matColumnDef="action">
+                <th mat-header-cell *matHeaderCellDef class="r-10">Action</th>
+                <td mat-cell *matCellDef="let element" class="r-5">
+                    <div class="action">
+                        <mat-icon (click)="editJob(element._id)">edit</mat-icon>
+                        <button mat-button class="btn" data-toggle="tooltip" title="Delete!"
+                            (click)="deleteJob(element._id)">
+                            <mat-icon color="warn">delete</mat-icon>
+                        </button>
+                    </div>
+                </td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        </table>
+    </mat-card-content>
+    <div *ngIf="dataSource.data.length < 1" class="no-data">
+        <h2>No Jobs Are Available</h2>
+    </div>
+    <div>
+        <mat-paginator [length]="length" [pageSize]="pageSize" [pageSizeOptions]="pageSizeOptions"
+            aria-label="Select page" (page)="pageChange($event)">
+        </mat-paginator>
+    </div>
+</mat-card>
+<mat-card class="submit">
+    <button mat-raised-button class="submit-btn" type="button" (click)="openModel(driver)"
+        [disabled]="!selectJob.length > 0">submit</button>
+    <ng-template #driver>
+        <h1 mat-dialog-title class="text-center">Select Driver</h1>
+        <mat-divider></mat-divider>
+        <div mat-dialog-content class="option-driver">
+            <mat-form-field>
+                <mat-label>Choose an Driver</mat-label>
+                <mat-select [(ngModel)]="selectedDriver">
+                    <mat-option [value]="driver" *ngFor="let driver of driverOption">{{driver}}</mat-option>
+                </mat-select>
+            </mat-form-field>
+        </div>
+        <div mat-dialog-actions class="btn">
+            <button mat-button mat-dialog-close cdkFocusInitial (click)="onSubmit()" color="primary">Save</button>
+        </div>
+    </ng-template>
+</mat-card>

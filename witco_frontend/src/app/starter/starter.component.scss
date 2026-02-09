@@ -1,0 +1,151 @@
+// table {
+//     width: 100%;
+//   }..
+.search {
+  padding: 15px 10px 10px 10px;
+  display: flex;
+
+  .search-txt {
+      padding: 10px;
+      font-size: 17px;
+      border: 3px solid black;
+      float: left;
+      width: 80%;
+      border-right: none;
+      background: #ffffff;
+      border-top-left-radius: 20px;
+      border-bottom-left-radius: 20px;
+  }
+
+  .btn-srch {
+      border: 3px solid;
+      border-left: none;
+      padding: 5px;
+      width: 20%;
+      border-bottom-right-radius: 20px;
+      border-top-right-radius: 20px;
+      cursor: pointer;
+  }
+} 
+
+.location{
+  color: #C62828;
+}
+
+.mr-3{
+  margin-right:10px;
+}
+table {
+  width: 100%;
+}
+
+.first{
+  width: 20%;
+}
+.wi-10{
+  width: 10px!important;
+}
+.first-name-col{
+  width: 9%;
+}
+
+.first-data{
+  width: 17%;
+}
+
+.phone{
+  width: 7%;
+}
+
+.company{
+  width: 9%;
+}
+
+.last-col{
+  width:9%;
+}
+
+.second{
+  width: 12%;
+}
+
+th, td {
+  overflow: hidden;
+  width: 100px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.btn{
+  padding: 0px !important;
+  min-width: 26px;
+}
+
+.headerCard {
+  padding-left: 24px;
+  padding-right: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.first-col{
+  width: 8%;
+}
+
+.add{
+  float: right;
+  margin:15px;
+  margin-top: 10px !important;
+  background-color: #41419e;
+  color: white !important;
+}
+
+.topLabel{
+  
+  margin-bottom: 0px;
+  // margin-top: 20px;
+  font-weight: bold;
+  color: #41419e;
+}
+.mat-header-cell{
+  vertical-align: middle;
+}
+table{
+  width: 100%;
+ }
+ 
+ .mat-column-firstname {
+   word-wrap: break-word !important;
+   white-space: unset !important;
+   flex: 0 0 28% !important;
+   width: 28% !important;
+   overflow-wrap: break-word;
+   word-wrap: break-word;
+ 
+   word-break: break-word;
+ 
+   -ms-hyphens: auto;
+   -moz-hyphens: auto;
+   -webkit-hyphens: auto;
+   hyphens: auto;
+ }
+ 
+ .mat-column-lastname {
+   word-wrap: break-word !important;
+   white-space: unset !important;
+   flex: 0 0 25% !important;
+   width: 25% !important;
+   overflow-wrap: break-word;
+   word-wrap: break-word;
+ 
+   word-break: break-word;
+ 
+   -ms-hyphens: auto;
+   -moz-hyphens: auto;
+   -webkit-hyphens: auto;
+   hyphens: auto;
+ }
+ .save-btn{
+  text-align: end;
+ }

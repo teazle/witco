@@ -1,0 +1,82 @@
+.toggle {
+    padding: 10px;
+    display: flex;
+    justify-content: center;
+}
+
+mat-card{
+    max-height: calc(100% - 80px)!important;
+    overflow-y: auto;
+}
+
+table {
+    width: 100%;
+}
+
+.mat-button-toggle-checked {
+    background-color: #41419e !important;
+    color: #FFFFFF;
+}
+
+td.mat-cell,
+td.mat-footer-cell,
+th.mat-header-cell {
+    text-align: center;
+}
+
+mat-button-toggle {
+    border-radius: 4px;
+}
+
+.text {
+    font-weight: 400;
+    text-align: start;
+}
+
+.btn {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+.mat-dialog-title {
+    margin: 0 0 6px !important;
+}
+
+.mat-mini-fab {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 28px !important;
+    width: 28px !important;
+}
+.next-btn{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.container {
+    position: relative;
+}
+
+.toolbarNav {
+    position: fixed;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+}
+
+.d_bottom_bar {
+    font-size: 36px;
+}
+
+.location{
+    color: #C62828;
+  }
+
+
+.mapbutton{
+    background-color:#41419e;
+    color: #FFFFFF;
+}

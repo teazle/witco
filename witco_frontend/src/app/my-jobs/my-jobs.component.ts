@@ -1,0 +1,91 @@
+import { Component, OnInit } from '@angular/core';
+import { MatDialog, MatTableDataSource } from '@angular/material';
+import { AuthService } from '../services/auth.service';
+import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
+import { event } from 'jquery';
+import { ToastrService } from 'ngx-toastr';
+
+
+@Component({
+  selector: 'app-my-jobs',
+  templateUrl: './my-jobs.component.html',
+  styleUrls: ['./my-jobs.component.css']
+})
+export class MyJobsComponent implements OnInit {
+  dataSource= new MatTableDataSource<any>();
+  selectedVal:any='Delivering';
+  length = 50;
+  pageSize = 5;
+  currentPage = 0;
+  pageSizeOptions: number[] = [5, 10, 15, 50];
+  displayedColumns: string[] = ['srno','customer', 'invoiceNumber', 'deliveryAddress','action'];
+  currentRoute:any;
+  constructor(
+    private authService: AuthService,
+    private toastService: ToastrService,
+    private model:MatDialog,
+    private route:ActivatedRoute,
+    public router: Router
+    ) { }
+
+  ngOnInit() {
+    if(this.router.url.includes('Delivering')){
+      this.deliveringOrder();
+    }
+    if(this.router.url.includes('Delivered')){
+      this.delivered();
+    }
+  }
+  deliveringOrder(){
+    this.authService.setLoader(true);
+    const status = 'Delivering';
+    this.authService.getData(`jobs/getAll?status=${status}&page=${this.currentPage + 1}&pagesize=${this.pageSize}`).subscribe((res: any) => {
+      this.dataSource.data = res.data || [];
+      this.length = Number(res.total) || 0;
+      this.authService.setLoader(false);
+    }, (error) => {
+      this.toastService.error(error);
+      this.authService.setLoader(false);
+    });
+  }
+
+  delivered(){
+    this.authService.setLoader(true);
+    const status = 'Delivered';
+    this.authService.getData(`jobs/getAll?status=${status}&page=${this.currentPage + 1}&pagesize=${this.pageSize}`).subscribe((res: any) => {
+      this.dataSource.data = res.data || [];
+      this.length = Number(res.total) || 0;
+      this.authService.setLoader(false);
+    }, (error) => {
+      this.toastService.error(error);
+      this.authService.setLoader(false);
+    });
+  }
+  handlePageEvent(event:any){
+    this.pageSize= event.pageSize;
+    this.currentPage=event.pageIndex;
+    if(this.router.url.includes('Delivering')){
+      this.deliveringOrder();
+    }
+    if(this.router.url.includes('Delivered')){
+      this.delivered();
+    }
+  }
+  completeOrder(data:any){
+      this.router.navigate([`/delivery-submit/${data._id}`],{relativeTo:this.route})
+  }
+  showAddress(model){
+    this.model.open(model)
+  }
+  profile(){
+    this.router.navigate(['/Userprofile']);
+  }
+
+  openlocation(zipcode:any){
+    const win = window.open(`https://www.google.com/maps/search/${zipcode}`+' '+'singapore', '_top');
+    return win.focus();
+    
+    // let url = `https://www.google.com/maps/search/${zipcode}`+' '+'singapore';
+    // window.open(url, '_blank');
+  }
+}

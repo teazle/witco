@@ -1,0 +1,59 @@
+<mat-card>
+  <div class="add">
+    <h5 class="topLabel">All Customers</h5>
+    <button mat-button mat-raised-button (click)="addCustomer()">
+      <mat-icon>add</mat-icon>
+      Add
+    </button>
+  </div>
+  <mat-card-content class="table"> 
+
+    <table mat-table [dataSource]="dataSource" class="mat-elevation-z8">
+
+      <ng-container matColumnDef="position"  class="r-5">
+        <th mat-header-cell *matHeaderCellDef class="r-5"> No. </th>
+        <td mat-cell *matCellDef="let element;let i=index" class="r-5"> {{i+1}} </td>
+      </ng-container>
+
+      <ng-container matColumnDef="firstName"  class="r-15">
+        <th mat-header-cell *matHeaderCellDef class="r-15"> Name </th>
+        <td mat-cell *matCellDef="let element" class="r-15"> {{element.firstName}}  {{element.lastName}} </td>
+      </ng-container>
+
+      <ng-container matColumnDef="email" class="r-20">
+        <th mat-header-cell *matHeaderCellDef class="r-20"> Email </th>
+        <td mat-cell *matCellDef="let element" class="r-20"> {{element.email}} </td>
+      </ng-container>
+
+      <ng-container matColumnDef="companyName" class="r-20">
+        <th mat-header-cell *matHeaderCellDef class="r-20"> Company Name </th>
+        <td mat-cell *matCellDef="let element" class="r-20"> {{element.companyName}} </td>
+      </ng-container>
+
+      <ng-container matColumnDef="phone" class="r-15">
+        <th mat-header-cell *matHeaderCellDef class="r-15"> Phone </th>
+        <td mat-cell *matCellDef="let element" class="r-15"> {{element.phone}} </td>
+      </ng-container>
+
+      <ng-container matColumnDef="address" class="r-30">
+        <th mat-header-cell *matHeaderCellDef class="r-30"> Address </th>
+        <td mat-cell *matCellDef="let element" class="r-30"> {{element.address}} </td>
+      </ng-container>
+
+      <ng-container matColumnDef="action" class="r-5">
+        <th mat-header-cell *matHeaderCellDef class="r-5"> Action </th>
+        <td mat-cell *matCellDef="let element" class="r-5">
+          <div class="action">
+              <mat-icon color="primary" (click)="editUser(element._id)">edit</mat-icon>
+              <mat-icon color="warn" (click)="deleteUser(element._id)">delete</mat-icon>
+          </div>
+        </td> 
+      </ng-container>
+      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+    </table> 
+  </mat-card-content>
+  <mat-paginator [length]="length" [pageSize]="pageSize" [pageSizeOptions]="pageSizeOptions" aria-label="Select page"
+    (page)="pageChange($event)">
+  </mat-paginator>
+</mat-card>

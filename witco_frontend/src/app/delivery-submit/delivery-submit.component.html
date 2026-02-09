@@ -1,0 +1,72 @@
+<mat-card>
+    <mat-card-title> Delivery Details</mat-card-title>
+    <mat-card-content>
+        <h4>Customer Details</h4>
+        <mat-list>
+            <mat-list-item>Name : {{jobDetails?.customer_firstName }}
+                &nbsp;{{jobDetails?.customer_lastName}}</mat-list-item>
+            <mat-divider></mat-divider>
+            <mat-list-item>Email : {{jobDetails?.customer_email}}</mat-list-item>
+            <mat-divider></mat-divider>
+            <mat-list-item>Phone : {{jobDetails?.customer_phone}}</mat-list-item>
+            <mat-divider></mat-divider>
+            <mat-list-item> DO Number  : {{goodsDetails?.invoiceNumber}}</mat-list-item>
+            <mat-divider></mat-divider>
+            <mat-list-item class="address"> Address : {{goodsDetails?.deliveryAddress}}</mat-list-item>
+            <mat-divider></mat-divider>
+        </mat-list>
+    </mat-card-content>
+
+    <mat-card-content>
+        <h4>Goods Details</h4>
+        <table mat-table [dataSource]="dataSource" class="mat-elevation-z8">
+            <ng-container matColumnDef="sr">
+                <th mat-header-cell *matHeaderCellDef> No. </th>
+                <td mat-cell *matCellDef="let element;let i=index"> {{i+1}} </td>
+            </ng-container>
+
+            <ng-container matColumnDef="name" >
+                <th mat-header-cell *matHeaderCellDef> Name </th>
+                <td mat-cell *matCellDef="let element" class="tbody"> {{element.goodsName}} </td>
+            </ng-container>
+
+            <ng-container matColumnDef="quantity">
+                <th mat-header-cell *matHeaderCellDef> Quantity </th>
+                <td mat-cell *matCellDef="let element"> {{element.quantity}} </td>
+            </ng-container>
+
+            <!-- <ng-container matColumnDef="unitPrice">
+                <th mat-header-cell *matHeaderCellDef> UnitPrice </th>
+                <td mat-cell *matCellDef="let element"> {{element.unitPrice}} </td>
+            </ng-container> -->
+
+            <!-- <ng-container matColumnDef="amount">
+                <th mat-header-cell *matHeaderCellDef> Amount </th>
+                <td mat-cell *matCellDef="let element"> {{element.amount}} </td>
+            </ng-container> -->
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+        </table>
+    </mat-card-content>
+
+    <!-- <mat-card-content>
+        <h4>Payment Details</h4>
+        <mat-radio-group [(ngModel)]="selectedOption" (change)="ChangepaymentMethod($event)" class="paymentBtn">
+            <mat-radio-button value="paid">paid</mat-radio-button>
+            <mat-radio-button value="unpaid">unpaid</mat-radio-button>
+          </mat-radio-group>
+    </mat-card-content> -->
+
+    <mat-card-content class="btn-group">
+        
+        <div class="proccess-btn-group"> 
+            <button mat-raised-button color="primary" (click)="sign()" [ngClass]="!checksign  ? 'green' : '' ">sign <mat-icon *ngIf="!checksign">done</mat-icon></button>
+            <button mat-raised-button color="primary" [disabled]="checksign" [ngClass]="!checkproof  ? 'green' : '' " (click)="webcam()">proof <mat-icon *ngIf="!checkproof">done</mat-icon></button>
+        </div>
+        <div class="submit-btn">
+            <button mat-raised-button color="primary" [disabled]="checkproof || checksign" (click)="submit()">Submit</button>
+        </div>
+
+    </mat-card-content>
+</mat-card>

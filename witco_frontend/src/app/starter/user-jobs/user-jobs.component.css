@@ -1,0 +1,63 @@
+tr.row {
+    background-color: #41419e;
+  }
+  
+  th.font {
+    color: white;
+    font-size: 15px;
+  }
+  
+  .mr-3 {
+    margin-right: 10px;
+  }
+  
+  table {
+    width: 100%;
+    table-layout: fixed;
+  }
+  
+  th,
+  td {
+    overflow: hidden;
+    width: 100px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  .cloud {
+    margin-top: 3px;
+    font-size: 20px;
+  }
+  
+  .idThWidth {
+    width: 5%;
+  }
+
+  .heading{
+      color: grey;
+      text-align: center;
+      padding-top: 10px;
+  }
+  
+  .btn {
+    padding: 0px !important;
+    min-width: 37px;
+  }
+  
+  .add {
+    float: right;
+    margin: 15px;
+    margin-top: 10px !important;
+    background-color: #41419e;
+    color: white !important;
+  }
+  
+  .add_new {
+    text-align: center;
+    margin: 15px;
+    float: right;
+    margin-bottom: 0px;
+    margin-top: 10px !important;
+    background-color: #41419e;
+    color: white !important;
+  }

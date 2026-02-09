@@ -1,0 +1,23 @@
+
+<mat-card>
+
+    <div style="text-align:center">
+        <div>
+            <p>{{seconds}}</p>
+            <webcam [trigger]="triggerObservable" (imageCapture)="handleImage($event)" [width]="350"
+            [height]="360"></webcam>
+            <br/>
+            <div class="btn-group">
+                <button (click)="triggerSnapshot()">Take A Photo</button>
+                <button (click)="save()" [disabled]="!checkPhoto">save</button>
+                <button (click)="back()">back</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="snapshot" *ngIf="webcamImage">
+        <h2>Preview</h2>
+        <img [src]="webcamImage.imageAsDataUrl" width="360" height="360"/>
+    </div>
+
+</mat-card>

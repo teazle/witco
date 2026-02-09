@@ -1,0 +1,23 @@
+# Dependencies
+witco_backend/node_modules/
+witco_frontend/node_modules/
+
+# Env and secrets (do not commit)
+witco_backend/.env
+.env
+*.env
+
+# Backend
+witco_backend/uploads/
+witco_backend/dist/
+witco_backend/*.pem
+witco_backend/*.log
+
+# Frontend
+witco_frontend/dist/
+witco_frontend/.angular/
+
+# OS and misc
+.DS_Store
+*.log
+.playwright-mcp/

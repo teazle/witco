@@ -1,0 +1,67 @@
+mat-card{
+    max-height: calc(100% - 128px)!important;
+    overflow: auto;
+}
+mat-card mat-card-content{
+    padding: 0!important;
+}
+.address{
+  height: 104px!important;
+  overflow: auto;
+}
+table {
+    width: 100%;
+}
+mat-card-title{
+    font-size: 20px;
+    font-weight: 700;
+    padding: 12px 6px;
+}
+h4{
+    font-size: 20px;
+    font-weight: 600;
+    padding: 12px 6px;
+    border-bottom: 1px solid #999;
+}
+
+.btn-group{
+    margin-top: 32px!important;
+    padding: 12px;
+    border: 1px dashed #999;
+}
+
+.proccess-btn-group{
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 18px 8px;
+    gap: 12px;
+}
+
+.proccess-btn-group button{
+    width: 100%;
+}
+
+.submit-btn{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+}
+
+.submit-btn button{
+    width: 100%;
+}
+
+.green{
+   background-color: green!important;
+}
+
+.paymentBtn{
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+}
+.tbody{
+    word-break: break-all;
+}

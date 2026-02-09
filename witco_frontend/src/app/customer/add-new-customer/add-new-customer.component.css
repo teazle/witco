@@ -1,0 +1,17 @@
+h1{
+    text-align: center;
+    margin-bottom: 0px;
+    margin-top: 20px;
+    font-weight: bold;
+    color: #41419e;
+}
+
+.phoneFild{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.phoneFild :first-child{
+    width: 140px;
+}

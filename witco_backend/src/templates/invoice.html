@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.7.7/handlebars.min.js"></script>
+<style>
+#top-part{
+    display: inline;
+}
+
+#main-container{
+    padding: 12px!important;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+}
+#container{
+    border: 3px solid #000!important;
+    position: relative;
+}
+#customers {
+  border-collapse: collapse;
+  width: 100%;
+  margin-top: 24px!important;
+}
+
+#customers td {
+  border: 1px solid;
+}
+#span1{
+    border-bottom: 1px solid #000;
+}
+#span2{
+    border-bottom: 1px solid #000;
+}
+#span3{
+    border-bottom: 1px solid #000;
+}
+#span4{
+    border-bottom: 1px solid #000;
+}
+#span5{
+    border-bottom: 1px solid #000;
+}
+
+#customers #th td {
+  text-align: center;
+  background-color: #41419e;
+  color: white;
+  border: 1px solid #000;
+}
+
+#signature {
+    margin-top: 80px;
+    position: relative;
+}
+
+#sign-second{
+  position: relative;
+  width: 100%;
+}
+
+#details{
+    font-size: 12px;
+    text-align: left;
+    float: right;
+}
+
+#line1{
+    width: 200px ; border: 1px solid ; margin: 2px;
+}
+
+#line2{
+    width: 200px ; border: 1px solid ; margin: 2px;
+}
+#sign-div-1{
+    position: absolute;
+    left: 0;
+}
+#sign-div-2{
+    position: absolute;
+    right: 0;
+}
+#sign-img{
+    height: 50px;
+    width: 200px;
+}
+#messrs{
+    /* width: 350px!important; */
+    margin-top: 120px!important;
+    font-size: 12px;
+    margin-right: 50px;
+}
+#header-title{
+  color: #41419e;
+  font-size: 16px;
+  margin-bottom: 2px;
+}
+#header h4{
+  color: #41419e;
+  margin-top: 0px;
+  margin-bottom: 10px;
+  font-size: 12px;
+}
+#header p{
+  color: #41419e;
+  margin: 0;
+  font-size: 12px;
+}
+#address{
+  color: #41419e;
+}
+#details h4{
+  color: #41419e;
+  font-weight: bold;
+}
+#tbody{
+  word-break: break-all;
+}
+#header{
+  display: inline-block;
+  margin-left: 90px;
+}
+#logo-img{
+  display: inline-block;
+  top: 30px;
+  position: absolute;
+}
+#logo-img img{
+  width: 80px;
+}
+
+#main-sign{
+  width: 100%;
+  display: block;
+}
+#item{
+  width: 20px !important;
+  text-align: center !important;
+}
+#quantity{
+  width: 48px !important;
+  text-align: center !important;
+}
+</style>
+
+
+</head>
+<body>
+  <script>
+
+  </script>
+    <div #id="main-container">
+      <div id="logo-img">
+        <img src="https://witco.s3.ap-southeast-1.amazonaws.com/Logo.svg" alt="not">
+      </div>
+      <div id="header">
+        <h2 id="header-title">WITCO ENVIROTECH PTE LTD</h2>
+        <h4>ENVIRONMENTAL CONTROL EQUIPMENTS</h4>
+        <p id="address">7030 Ang Mo Kio Avenue 5 #05-33 </br> Northstar@AMK, Singapore 569880 </p>
+        <p>Tel: (65) 6482 0371, 6482 0630</p>
+        <p>Fax: (65) 6481 3364, 6286 4658</p>
+        <p>E-Mail: sales@witco.com.sg</p>
+      </div>
+      <div id="details">
+        <h4>DELIVERY ORDER</h4>
+        <p>DO No. : <span id="span1">{{job.do_number}}</span>
+        </p>
+        <p>Order Date: <span id="span2">{{job.createdAt }}</span>
+        </p>
+        <p>Your P/O NO.: <span id="span2">{{good.inv_temp }}</span>
+        </p>
+        <p>Order By: <span id="span4">{{job.customer_firstName}}</span>
+        </p>
+        <p>Delivery Date:<span id="span3"> {{job.delivery_time }} {{time}}</span>
+        </p>
+      </div>
+      <div id="messrs">
+        <p>Messers: <span id="span5"> {{job.customer_companyName}} </span>
+        </p>
+        <p>Delivery Address:<span id="span5">{{job.customer_deliveryAddress}}</span></p>
+      </div>
+      <!-- Invoice Table  -->
+      <div #id="container">
+          <table id="customers">
+            <tr id="th">
+              <td id="item">Item</td>
+              <td>Description</td>
+              <td id="quantity">Quantity</td>
+            </tr>
+            {{#each good.goods}}
+              <tr>
+                <td id="item">{{serialNumber @index}}</td>
+                <td id="tbody">{{this.goodsName}}</td>
+                <td id="quantity">{{this.quantity}}</td>
+              </tr>
+            {{/each}}
+          </table>
+        </div>
+        <!-- Signature -->
+        <div id="main-sign">
+          <div id="sign-second">
+            <div id="signature">
+              <div id="sign-div-1">
+                <img id="sign-img" src="https://witco.s3.ap-southeast-1.amazonaws.com/Logo.svg" alt="not" height="50px">
+                <p id="line1"></p>
+                <p>Authorized Signature</p>
+              </div>
+              <div id="sign-div-2">
+                <img id="sign-img" src={{customerSignUrl}} alt="" height="50px" width="180px">
+                <p id="line2"></p>
+                <p>Received By</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+  </body>
+</html>
+
+

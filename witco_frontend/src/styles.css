@@ -1,0 +1,78 @@
+/* You can add global styles to this file, and also import other style files */
+@import url('https://fonts.googleapis.com/css?family=Poppins:300,400,500,600,700');
+    
+body{
+    background-color: white !important;
+}
+
+.mat-card{
+    box-shadow: 10 10 10 10 black !important;
+}
+
+.mat-dialog-container{
+    position: relative;
+}
+
+.close-button{
+    right: 7px;
+    position: absolute;
+    top: absolute;
+    color: blue;
+    top: 2px;
+    font-size: 20px;
+}
+
+
+mat-toolbar.green{
+    background-color: #ffffff !important;
+}
+.login-register{
+    position:relative;
+    z-index: 999;
+}
+.mat-sort-header-arrow{
+    color : orange !important;
+     opacity: 1 !important; 
+  }
+
+  mat-sidenav{
+      width: 240px !important;
+  }
+
+mat-spinner.mat-progress-spinner{
+    position: absolute;
+    top: 50%;
+    z-index: 999;
+    left: 48%;
+    width:50px !important;
+    height:50px !important;
+}
+
+mat-spinner.spinner1 svg{
+    width:50px !important;
+    height:50px !important;
+}
+.spinner-wrapper{
+    opacity: 0.5;
+    height: 100%;
+    width: 100%;
+    top:0;
+    z-index: 999;
+    background-color: black;
+    position: fixed;
+}
+
+.mm_menu{
+    position: absolute;
+    right: 24px;
+    padding: 10px;
+  }
+
+.mat-elevation-z8 {    
+overflow-x: auto;
+}
+
+    
+
+
+
