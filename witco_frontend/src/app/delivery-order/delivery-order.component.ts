@@ -79,7 +79,7 @@ export class DeliveryOrderComponent implements OnInit {
   }
 
   deleteJob(id) {
-    const dialogRef = this.dialog.open(ConfirmDialogComponent,{data:'delete'});
+    const dialogRef = this.dialog.open(ConfirmDialogComponent,{data:'delete', panelClass: 'center-dialog'});
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
         this.authService.setLoader(true);
@@ -123,7 +123,7 @@ export class DeliveryOrderComponent implements OnInit {
     }
   }
   openModel(model) {
-    this.model.open(model);
+    this.model.open(model, { panelClass: 'center-dialog' });
   }
   onSubmit() {
     if (this.selectedDriver) {

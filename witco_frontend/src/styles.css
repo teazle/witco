@@ -12,6 +12,12 @@ body{
 .mat-dialog-container{
     position: relative;
 }
+.cdk-overlay-pane.center-dialog{
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+}
 
 .close-button{
     right: 7px;
