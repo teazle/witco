@@ -12,6 +12,7 @@ const options = require("../utils/options");
 const fs = require("fs");
 const path = require("path");
 const createPDFFromImages = require("../utils/pdfgenerator");
+const { blobPut, isBlobEnabled } = require("../utils/blob");
 const date = require("date-and-time");
 const s3 = require("../utils/awsconfig");
 const get_do = require("./CounterController");
@@ -492,37 +493,41 @@ exports.invoice = catchAsync(async (req,res,next)=>{
   const filename =  'invoice'+'-'+do_number + '.pdf';
   const pdfpath = path.join(__dirname, `../../docs/${filename}`);
   const goodsAll = await Goods.findOne({_id:jobinvoice.goods_id}).lean();
+  const signKey = `uploads/sign-${encodeURIComponent(do_number)}.png`;
 const document = {
   html: html,
   data: {
     time,
     job: jobinvoice,
     good: goodsAll,
-    customerSignUrl: `${UPLOAD_BASE_URL}/uploads/sign-${encodeURIComponent(do_number)}.png`,
+    customerSignUrl: `${UPLOAD_BASE_URL}/${signKey}`,
   },
   path: "./docs/" + filename,
 };
 
-pdf.create(document, options)
-  .then((data) => {
+  try {
+    await pdf.create(document, options);
     const pdfBytes = fs.readFileSync(pdfpath);
-    if (s3) {
-      const params = {
-        Bucket: "witco",
-        Key: `uploads/invoice/invoice-${do_number}.pdf`,
-        Body: pdfBytes,
-        ACL: "public-read-write",
-        ContentType: "application/pdf",
-      };
-      s3.putObject(params, (err, data) => {
-        if (err) console.error("Error uploading PDF to S3:", err);
-        else console.log("PDF uploaded to S3 successfully");
-      });
+    const invoiceKey = `uploads/invoice/invoice-${do_number}.pdf`;
+
+    if (isBlobEnabled()) {
+      await blobPut(invoiceKey, pdfBytes, "application/pdf");
+    } else if (s3) {
+      await s3
+        .putObject({
+          Bucket: "witco",
+          Key: invoiceKey,
+          Body: pdfBytes,
+          ACL: "public-read-write",
+          ContentType: "application/pdf",
+        })
+        .promise();
     }
-  })
-.catch(error => {
+  } catch (error) {
     console.log(error);
-  });
+  } finally {
+    deletePdf(pdfpath);
+  }
 
   if (jobinvoice.customer_email && jobinvoice.customer_email!=""){
   let myUser = {
@@ -548,7 +553,10 @@ pdf.create(document, options)
     );
   }
 
-  deletePdf(pdfpath);
+  res.status(200).send({
+    status: "success",
+    message: "Invoice generated",
+  });
 });
 function deletePdf(filePath) {
   setTimeout(() => {
