@@ -7,17 +7,14 @@ const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
 const Email = require("../utils/email");
 const client = accountSid && authToken ? require("twilio")(accountSid, authToken) : null;
-const pdf = require("pdf-creator-node");
-const options = require("../utils/options");
 const fs = require("fs");
 const path = require("path");
 const createPDFFromImages = require("../utils/pdfgenerator");
+const createInvoicePdf = require("../utils/invoicePdf");
 const { blobPut, isBlobEnabled } = require("../utils/blob");
 const date = require("date-and-time");
 const s3 = require("../utils/awsconfig");
 const get_do = require("./CounterController");
-
-const UPLOAD_BASE_URL = process.env.UPLOAD_BASE_URL || "http://localhost:5000";
 exports.addJob = catchAsync(async (req, res, next) => { 
     const {customer_firstName,
       customer_companyName,
@@ -472,61 +469,65 @@ exports.invoice = catchAsync(async (req,res,next)=>{
   if (!req.body.job_id || req.body.job_id.length !== 24) {
     return next(new AppError("Please Provide Valid Job Id", 400));
   }
-  const html = fs.readFileSync(path.join(__dirname, '../templates/invoice.html'), 'utf-8');
   const jobinvoice =  await Job.findOne({_id:req.body.job_id}).lean();
   if(!jobinvoice){
     throw new AppError("invoice not found", 404);
   }
-  let time = "";
-  time += jobinvoice.delivery_time.getUTCHours();
-  time+=":"
-  time += jobinvoice.delivery_time.getUTCMinutes();
-  jobinvoice.delivery_time = jobinvoice.delivery_time
-    .toISOString()
-    .slice(0, 10);
-  jobinvoice.createdAt.setTime(
-    jobinvoice.createdAt.getTime() + 8 * 60 * 60 * 1000
-  );
-   jobinvoice.createdAt = jobinvoice.createdAt.toISOString().slice(0, 10);
+  const goodsAll = await Goods.findOne({_id:jobinvoice.goods_id}).lean();
+  if(!goodsAll){
+    throw new AppError("Goods not found", 404);
+  }
+
+  const createdAt = new Date(jobinvoice.createdAt);
+  createdAt.setTime(createdAt.getTime() + 8 * 60 * 60 * 1000);
+  const orderDate = createdAt.toISOString().slice(0, 10);
+
+  let deliveryDate = "";
+  let deliveryTime = "";
+  if (jobinvoice.delivery_time) {
+    const delivery = new Date(jobinvoice.delivery_time);
+    deliveryDate = delivery.toISOString().slice(0, 10);
+    const hh = String(delivery.getUTCHours()).padStart(2, "0");
+    const mm = String(delivery.getUTCMinutes()).padStart(2, "0");
+    deliveryTime = `${hh}:${mm}`;
+  }
 
   const do_number = jobinvoice.do_number;
-  const filename =  'invoice'+'-'+do_number + '.pdf';
-  const pdfpath = path.join(__dirname, `../../docs/${filename}`);
-  const goodsAll = await Goods.findOne({_id:jobinvoice.goods_id}).lean();
-  const signKey = `uploads/sign-${encodeURIComponent(do_number)}.png`;
-const document = {
-  html: html,
-  data: {
-    time,
-    job: jobinvoice,
-    good: goodsAll,
-    customerSignUrl: `${UPLOAD_BASE_URL}/${signKey}`,
-  },
-  path: "./docs/" + filename,
-};
+  const invoiceKey = `uploads/invoice/invoice-${do_number}.pdf`;
 
+  let pdfBytes;
   try {
-    await pdf.create(document, options);
-    const pdfBytes = fs.readFileSync(pdfpath);
-    const invoiceKey = `uploads/invoice/invoice-${do_number}.pdf`;
-
-    if (isBlobEnabled()) {
-      await blobPut(invoiceKey, pdfBytes, "application/pdf");
-    } else if (s3) {
-      await s3
-        .putObject({
-          Bucket: "witco",
-          Key: invoiceKey,
-          Body: pdfBytes,
-          ACL: "public-read-write",
-          ContentType: "application/pdf",
-        })
-        .promise();
-    }
+    pdfBytes = await createInvoicePdf({
+      job: jobinvoice,
+      goods: goodsAll,
+      orderDate,
+      deliveryDate,
+      deliveryTime,
+    });
   } catch (error) {
-    console.log(error);
-  } finally {
-    deletePdf(pdfpath);
+    console.error("Invoice PDF generation failed:", error);
+    return next(new AppError("Failed to generate invoice", 500));
+  }
+
+  if (isBlobEnabled()) {
+    await blobPut(invoiceKey, pdfBytes, "application/pdf");
+  } else if (s3) {
+    await s3
+      .putObject({
+        Bucket: "witco",
+        Key: invoiceKey,
+        Body: pdfBytes,
+        ACL: "public-read-write",
+        ContentType: "application/pdf",
+      })
+      .promise();
+  } else {
+    const outDir = path.join(__dirname, "..", "..", "uploads", "invoice");
+    await fs.promises.mkdir(outDir, { recursive: true });
+    await fs.promises.writeFile(
+      path.join(outDir, `invoice-${do_number}.pdf`),
+      pdfBytes
+    );
   }
 
   if (jobinvoice.customer_email && jobinvoice.customer_email!=""){
@@ -558,16 +559,6 @@ const document = {
     message: "Invoice generated",
   });
 });
-function deletePdf(filePath) {
-  setTimeout(() => {
-    try {
-      fs.unlinkSync(filePath);
-      console.log("file deleted");
-    } catch (err) {
-      return err;
-    }
-  }, 10000);
-}
 // function get_do_number(){
         
 //   let key="Do-";
