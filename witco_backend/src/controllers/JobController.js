@@ -87,6 +87,21 @@ exports.getAllJob = catchAsync(async (req, res, next) => {
   let type = req.query.type === 'ASCE' ? 1 : -1;
   let field = req.query.field 
   let where = {};
+  const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const searchField = req.query.searchField;
+  const searchValueRaw = req.query.searchValue;
+  const allowedSearchFields = new Set([
+    "invoiceNumber",
+    "inv_temp",
+    "invoice_no",
+    "customer_companyName",
+    "customer_firstName",
+    "customer_lastName",
+    "driver_firstName",
+    "driver_lastName",
+    "driver_email",
+    "deliveryAddress",
+  ]);
 
   let sort ;
   if (field &&  field !== 'None') { sort = {}; sort[field]=type;}
@@ -113,6 +128,15 @@ exports.getAllJob = catchAsync(async (req, res, next) => {
   }
   if (req.query.driver_email) {
     where.driver_email = req.query.driver_email;
+  }
+  if (req.query.invoiceNumber) {
+    where.invoiceNumber = req.query.invoiceNumber;
+  }
+  if (searchField && searchValueRaw && allowedSearchFields.has(searchField)) {
+    const searchValue = String(searchValueRaw).trim();
+    if (searchValue.length) {
+      where[searchField] = { $regex: new RegExp(escapeRegex(searchValue), "i") };
+    }
   }
   if (req.query.fromDate && req.query.toDate) {
     const fromDate = new Date(req.query.fromDate);

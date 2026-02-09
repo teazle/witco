@@ -85,7 +85,7 @@ constructor(private router: Router,private _authservice : AuthService,private ro
   ];
 
  Logout(){
-  const dialogRef = this.dialog.open(ConfirmDialogComponent,{data:'LogOut'});
+  const dialogRef = this.dialog.open(ConfirmDialogComponent,{data:'LogOut', panelClass: 'center-dialog'});
   dialogRef.afterClosed().subscribe(result => {
     if (result) {
           localStorage.removeItem('token');

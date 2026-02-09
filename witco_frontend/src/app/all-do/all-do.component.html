@@ -1,5 +1,15 @@
 <mat-card >
     <div class="header">
+        <mat-form-field appearance="outline">
+            <mat-label>DO Number</mat-label>
+            <input
+              type="text"
+              placeholder="DO Number"
+              aria-label="DO Number"
+              matInput
+              [(ngModel)]="doNumberInputValue"
+            />
+        </mat-form-field>
         <mat-form-field  appearance="outline" 
         color="accent"
          >
@@ -42,7 +52,7 @@
             color="warn"
             type="button"
             (click)="searchJobs()"
-            [disabled]=" !driverInputValue ? (!fromDate || !toDate) ? true :false  :  (!fromDate && !toDate) ? false : (!fromDate || !toDate) ? true :false  "
+            [disabled]="isSearchDisabled()"
         >
         Search
         </button>
@@ -62,6 +72,42 @@
         <mat-button-toggle value="Delivering" (click)="deliveringOrder()">Delivering</mat-button-toggle>
         <mat-button-toggle value="Delivered" (click)="delivered()">Delivered</mat-button-toggle>
     </mat-button-toggle-group>
+</mat-card>
+<mat-card class="sort-bar">
+    <div class="header">
+        <mat-form-field appearance="outline">
+            <mat-label>Sort By</mat-label>
+            <mat-select [(ngModel)]="sortField" (selectionChange)="searchJobs()">
+                <mat-option *ngFor="let option of sortFieldOptions" [value]="option.value">{{option.label}}</mat-option>
+            </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+            <mat-label>Order</mat-label>
+            <mat-select [(ngModel)]="sortType" (selectionChange)="searchJobs()">
+                <mat-option value="ASCE">Ascending</mat-option>
+                <mat-option value="DESC">Descending</mat-option>
+            </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+            <mat-label>Search Field</mat-label>
+            <mat-select [(ngModel)]="searchField">
+                <mat-option *ngFor="let option of searchFieldOptions" [value]="option.value">{{option.label}}</mat-option>
+            </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+            <mat-label>Search Value</mat-label>
+            <input matInput [(ngModel)]="searchValue" placeholder="Search">
+        </mat-form-field>
+        <button
+            class="search-btn"
+            mat-flat-button
+            color="warn"
+            type="button"
+            (click)="searchJobs()"
+        >
+        Apply
+        </button>
+    </div>
 </mat-card>
 <mat-card class="table">
     <table mat-table [dataSource]="dataSource" class="mat-elevation-z8" *ngIf="dataSource.data.length > 0  && selectedVal == 'Delivering'"> 
@@ -94,7 +140,7 @@
         
         <ng-container matColumnDef="deliveryAddress" >
             <th mat-header-cell *matHeaderCellDef class="r-30"> Delivery Address </th>
-            <td mat-cell *matCellDef="let element" class="r-30"> {{element.deliveryAddress}} </td>
+            <td mat-cell *matCellDef="let element" class="r-30"> {{element.deliveryAddress || element.customer_deliveryAddress}} </td>
         </ng-container>
 
         <ng-container matColumnDef="driver">
@@ -198,7 +244,7 @@
 
         <ng-container matColumnDef="deliveryAddress" >
             <th mat-header-cell *matHeaderCellDef class="r-30"> Delivery Address </th>
-            <td mat-cell *matCellDef="let element" class="r-30"> {{element.deliveryAddress}} </td>
+            <td mat-cell *matCellDef="let element" class="r-30"> {{element.deliveryAddress || element.customer_deliveryAddress}} </td>
         </ng-container>
 
         <ng-container matColumnDef="driver">
@@ -219,7 +265,7 @@
 
         <ng-container matColumnDef="DeliveryDate">
             <th mat-header-cell *matHeaderCellDef class="r-15"> Delivery Date </th>
-            <td mat-cell *matCellDef="let element" class="r-15"> {{element.delivery_time | date : 'dd-MM-yyyy' : 'UTC'}}  {{element.delivery_time | date : 'hh:mm' : 'UTC'}} </td>
+            <td mat-cell *matCellDef="let element" class="r-15"> {{element.delivery_time | date : 'dd-MM-yyyy' : 'UTC'}}  {{element.delivery_time | date : 'HH:mm' : 'UTC'}} </td>
         </ng-container>
       
         <!-- <ng-container matColumnDef="paymentStatus">

@@ -17,6 +17,7 @@ import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.compone
 export class AllDoComponent implements OnInit {
 
   driverInputValue;
+  doNumberInputValue = '';
   myControl = new FormControl();
   filteredOptions: Observable<string[]>;
   options: any[] = [];
@@ -35,6 +36,31 @@ export class AllDoComponent implements OnInit {
   displayedColumns: string[] = ['srno','customer', 'invoiceNumber','inv_temp', 'customer_companyName','deliveryAddress','driver','driverEmail','vehicleNumber','Date','action','editJob'];
   displayedColumnsDelivered: string[] = ['srno','invoice_no','customer', 'invoiceNumber','inv_temp', 'customer_companyName', 'deliveryAddress','driver','driverEmail','vehicleNumber','DeliveryDate','action','pdf','invoice'];
   selectedDriver:any;
+  sortField = 'delivery_time';
+  sortType: 'ASCE' | 'DESC' = 'DESC';
+  searchField = 'invoiceNumber';
+  searchValue = '';
+  sortFieldOptions = [
+    { label: 'Delivery Date', value: 'delivery_time' },
+    { label: 'DO Number', value: 'invoiceNumber' },
+    { label: 'PO Number', value: 'inv_temp' },
+    { label: 'Company Name', value: 'customer_companyName' },
+    { label: 'Customer First Name', value: 'customer_firstName' },
+    { label: 'Driver First Name', value: 'driver_firstName' },
+    { label: 'Invoice Number', value: 'invoice_no' },
+  ];
+  searchFieldOptions = [
+    { label: 'DO Number', value: 'invoiceNumber' },
+    { label: 'PO Number', value: 'inv_temp' },
+    { label: 'Invoice Number', value: 'invoice_no' },
+    { label: 'Company Name', value: 'customer_companyName' },
+    { label: 'Customer First Name', value: 'customer_firstName' },
+    { label: 'Customer Last Name', value: 'customer_lastName' },
+    { label: 'Driver First Name', value: 'driver_firstName' },
+    { label: 'Driver Last Name', value: 'driver_lastName' },
+    { label: 'Driver Email', value: 'driver_email' },
+    { label: 'Delivery Address', value: 'deliveryAddress' },
+  ];
   @ViewChild('fromInput', {static: false}) fromInput:ElementRef;
   @ViewChild('toInput', {static: false}) toInput:ElementRef
   drivername: any =[];
@@ -64,48 +90,17 @@ export class AllDoComponent implements OnInit {
     );
   }
     deliveringOrder(){
-    if (isNaN((this.fromDate && this.fromDate.valueOf()))  && isNaN(this.toDate && this.toDate.valueOf())) {
-      this.authService.setLoader(true);
-      let qp = {
-        pagesize: this.pageSize,
-        page: this.currentPage + 1
-      }
-      this.authService.getData(`jobs/getAll?status=${this.selectedVal}&pagesize=${qp.pagesize}&page=${qp.page}`).subscribe((res:any)=>{
-        this.dataSource.data=res.data;
-        this.length= res.total;
-        this.authService.setLoader(false);
-      }, (error)=>{
-        this.toastService.error(error);
-        this.authService.setLoader(false);
-      }
-      )
-    }
-    else{
-      this.searchJobs()
-    }
+    this.currentPage = 0;
+    this.sortField = 'updatedAt';
+    this.sortType = 'DESC';
+    this.searchJobs();
   }
 
   delivered(){
-    if ( isNaN(this.fromDate && this.fromDate.valueOf())  && isNaN(this.toDate && this.toDate.valueOf())) {
-      this.authService.setLoader(true);
-      let qp = {
-        pagesize: this.pageSize,
-        page: this.currentPage + 1
-      }
-      this.authService.getData(`jobs/getAll?status=${this.selectedVal}&pagesize=${qp.pagesize}&page=${qp.page}`).subscribe((res:any)=>{
-        this.dataSource.data=res.data;
-        this.length= res.total;
-        this.authService.setLoader(false);
-
-      },
-      (error)=>{
-        this.toastService.error(error);
-        this.authService.setLoader(false);
-      }
-      )
-    }else{
-      this.searchJobs();
-    }
+    this.currentPage = 0;
+    this.sortField = 'delivery_time';
+    this.sortType = 'DESC';
+    this.searchJobs();
   }
   handlePageEvent(event:any){
     this.pageSize=event.pageSize;
@@ -122,52 +117,51 @@ export class AllDoComponent implements OnInit {
     
   }
   searchJobs() {
-    this.authService.setLoader(true); 
-    let qp = {
-      pagesize: this.pageSize,
-      page: this.currentPage + 1
+    this.authService.setLoader(true);
+    const qp: string[] = [
+      `status=${this.selectedVal}`,
+      `pagesize=${this.pageSize}`,
+      `page=${this.currentPage + 1}`,
+    ];
+
+    if (this.fromDate && this.toDate) {
+      qp.push(`fromDate=${moment(this.fromDate).format('YYYY-MM-DD')}`);
+      qp.push(`toDate=${moment(this.toDate).format('YYYY-MM-DD')}`);
     }
-    if (!this.driverInputValue  && (!this.fromDate || !this.toDate)) {
-      if(this.selectedVal == 'Delivering')
-      {
-        this.deliveringOrder();
+
+    if (this.driverInputValue) {
+      const driver = (this.driverDetails || []).find((res: any) => {
+        return res.firstName == this.driverInputValue.split(' ')[0] && res.lastName == this.driverInputValue.split(' ')[1];
+      });
+      if (!driver) {
+        this.toastService.error('Driver not found');
+        this.authService.setLoader(false);
+        return;
       }
-      if(this.selectedVal == 'Delivered'){
-        this.delivered();
-      }
-    } else{
-      let driver;
-      let driverEmail;
-      let api;
-      let data = {
-        fromDate: moment(this.fromDate).format('YYYY-MM-DD'),
-        toDate: moment(this.toDate).format('YYYY-MM-DD'),
-      };
-      if(this.driverInputValue){
-        driver = this.driverDetails.filter((res)=>{ 
-          return res.firstName == this.driverInputValue.split(' ')[0] && res.lastName == this.driverInputValue.split(' ')[1]
-        });
-        driverEmail = driver[0].email;
-      }
-      if(this.driverInputValue && (!this.fromDate || !this.toDate)){
-        api = this.authService.getData(`jobs/getAll?status=${this.selectedVal}&driver_email=${driverEmail}&pagesize=${qp.pagesize}&page=${qp.page}`)
-      }
-      else if(!this.driverInputValue && (this.fromDate || this.toDate)){
-        api = this.authService.getData(`jobs/getAll?status=${this.selectedVal}&fromDate=${data.fromDate}&toDate=${data.toDate}&pagesize=${qp.pagesize}&page=${qp.page}`)
-      }
-      else{
-        api = this.authService.getData(`jobs/getAll?status=${this.selectedVal}&fromDate=${data.fromDate}&toDate=${data.toDate}&driver_email=${driverEmail}&pagesize=${qp.pagesize}&page=${qp.page}`)
-      }
-      
-        api.subscribe((res:any)=>{
-          this.dataSource.data=res.data;
-          this.authService.setLoader(false);
-          this.length= res.total;
-        },(error)=>{
-          this.toastService.error(error);
-          this.authService.setLoader(false);
-        });
+      qp.push(`driver_email=${encodeURIComponent(driver.email)}`);
     }
+
+    if (this.doNumberInputValue && this.doNumberInputValue.trim()) {
+      qp.push(`invoiceNumber=${encodeURIComponent(this.doNumberInputValue.trim())}`);
+    }
+
+    if (this.sortField && this.sortField !== 'None') {
+      qp.push(`field=${encodeURIComponent(this.sortField)}`);
+      qp.push(`type=${encodeURIComponent(this.sortType)}`);
+    }
+    if (this.searchField && this.searchValue && this.searchValue.trim()) {
+      qp.push(`searchField=${encodeURIComponent(this.searchField)}`);
+      qp.push(`searchValue=${encodeURIComponent(this.searchValue.trim())}`);
+    }
+
+    this.authService.getData(`jobs/getAll?${qp.join('&')}`).subscribe((res:any)=>{
+      this.dataSource.data=res.data;
+      this.authService.setLoader(false);
+      this.length= res.total;
+    },(error)=>{
+      this.toastService.error(error);
+      this.authService.setLoader(false);
+    });
   }
 
   openlocation(value:any){
@@ -179,8 +173,13 @@ export class AllDoComponent implements OnInit {
     if (this.fromInput && this.fromInput.nativeElement) this.fromInput.nativeElement.value = '';
     if (this.toInput && this.toInput.nativeElement) this.toInput.nativeElement.value = '';
     this.driverInputValue = '';
+    this.doNumberInputValue = '';
     this.fromDate = undefined;
     this.toDate = undefined;
+    this.searchField = 'invoiceNumber';
+    this.searchValue = '';
+    this.sortField = this.selectedVal === 'Delivered' ? 'delivery_time' : 'updatedAt';
+    this.sortType = 'DESC';
     this.currentPage = 0;
     if (this.selectedVal === 'Delivering') {
       this.searchJobs();
@@ -190,8 +189,15 @@ export class AllDoComponent implements OnInit {
     }
   }
 
+  isSearchDisabled() {
+    if (this.doNumberInputValue && this.doNumberInputValue.trim()) {
+      return false;
+    }
+    return (this.fromDate && !this.toDate) || (!this.fromDate && this.toDate);
+  }
+
   editDriver(model){
-    this.model.open(model);
+    this.model.open(model, { panelClass: 'center-dialog' });
   }
   getAllDriver(){
     this.authService.setLoader(true);
@@ -262,7 +268,7 @@ export class AllDoComponent implements OnInit {
   }
 
   deleteJob(id) {
-    const dialogRef = this.model.open(ConfirmDialogComponent,{data:'delete'});
+    const dialogRef = this.model.open(ConfirmDialogComponent,{data:'delete', panelClass: 'center-dialog'});
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
         this.authService.setLoader(true);

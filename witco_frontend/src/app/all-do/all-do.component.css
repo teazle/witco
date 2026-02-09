@@ -11,6 +11,13 @@
         white-space: nowrap;
     }
 }
+.table .mat-header-cell,
+.table .mat-cell{
+    font-size: 12px;
+}
+.sort-bar .header{
+    padding-top: 10px!important;
+}
 .edit-driver{
     text-align: center;
 }
