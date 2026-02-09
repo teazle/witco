@@ -1,9 +1,8 @@
 
 <mat-card>
 
-    <div style="text-align:center">
-        <div>
-            <p>{{seconds}}</p>
+        <div style="text-align:center">
+            <div>
             <webcam [trigger]="triggerObservable" (imageCapture)="handleImage($event)" [width]="350"
             [height]="360"></webcam>
             <br/>

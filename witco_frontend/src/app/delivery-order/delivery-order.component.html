@@ -113,7 +113,7 @@
 </mat-card>
 <mat-card class="submit">
     <button mat-raised-button class="submit-btn" type="button" (click)="openModel(driver)"
-        [disabled]="!selectJob.length > 0">submit</button>
+        [disabled]="selectJob.length <= 0">submit</button>
     <ng-template #driver>
         <h1 mat-dialog-title class="text-center">Select Driver</h1>
         <mat-divider></mat-divider>

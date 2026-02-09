@@ -27,6 +27,7 @@ export class AllDoComponent implements OnInit {
   selectedVal:any='Delivering';
   fromDate: Date | undefined;
   toDate: Date | undefined;
+  toDay = new Date();
   length = 0;
   pageSize = 5;
   currentPage = 0;

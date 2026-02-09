@@ -16,7 +16,8 @@ export class SignComponent implements OnInit {
   params_id:any;
   @ViewChild(SignaturePad,{static: false}) signaturePad: SignaturePad;
 
-  private signaturePadOptions: Object = {
+  // Used by the template.
+  signaturePadOptions: Object = {
     'minWidth': 3,
     'canvasWidth': 370,
     'canvasHeight': 370,
