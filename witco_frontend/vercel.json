@@ -4,5 +4,6 @@
   "outputDirectory": "dist",
   "framework": null,
   "installCommand": "npm install --legacy-peer-deps",
-  "regions": ["sin1"]
+  "regions": ["sin1"],
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
 }
