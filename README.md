@@ -2,6 +2,23 @@
 
 Full-stack app: **Angular** frontend + **Node/Express** backend (MongoDB, JWT, Twilio, AWS S3).
 
+Monorepo: `witco_backend/` and `witco_frontend/` live in this single Git repo (root at `Witco/`).
+
+## Git & remote
+
+Repo is initialized at the monorepo root. To push to GitHub or GitLab:
+
+1. Create a new repository (e.g. `witco` or `witco-app`). Do **not** initialize with a README if you already have one.
+2. Add the remote and push:
+
+```bash
+git remote add origin https://github.com/YOUR_USERNAME/witco.git   # or your GitLab URL
+git branch -M main
+git push -u origin main
+```
+
+Use SSH if you prefer: `git@github.com:YOUR_USERNAME/witco.git`.
+
 ## What was missing to run in dev
 
 - **Backend** was set up for production only (ports 80/443, SSL certs required). Dev mode is now added: when `NODE_ENV` is not `production`, the backend runs a single HTTP server on `PORT` (default 5000) with no SSL.
