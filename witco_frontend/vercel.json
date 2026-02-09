@@ -1,9 +1,13 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
   "buildCommand": "NODE_OPTIONS=--openssl-legacy-provider node scripts/set-env.js && NODE_OPTIONS=--openssl-legacy-provider npm run build -- --configuration production",
   "outputDirectory": "dist",
   "framework": null,
   "installCommand": "npm install --legacy-peer-deps",
   "regions": ["sin1"],
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "routes": [
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/index.html" }
+  ]
 }
