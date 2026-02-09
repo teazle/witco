@@ -65,34 +65,33 @@ Frontend will be at **http://localhost:4200** and will proxy `/api/v1/*` to the 
 - Copy `witco_frontend/dist/*` into `witco_backend/dist/` (or configure your deploy to serve the same app).
 - Run the backend (e.g. `npm run prod`); it will listen on HTTP 80 (redirect) and HTTPS 443.
 
-## Deploy to Vercel (frontend + backend)
+## Deploy to Vercel (monorepo: one repo, two projects)
 
-You can deploy both the frontend and the backend as two separate Vercel projects.
+Use **one GitHub repo** and create **two Vercel projects** (backend + frontend). Each project uses a different **Root Directory** so Vercel only builds and deploys that part.
 
-### 1. Deploy the backend
+### 1. Backend project
 
-1. In Vercel, create a **new project** and import your repo.
-2. Set **Root Directory** to `witco_backend`.
-3. Add **Environment Variables** (Settings → Environment Variables):
+1. Go to [vercel.com](https://vercel.com) → **Add New** → **Project**.
+2. **Import** your Git repo (e.g. `teazle/witco`). Use the same repo for both projects.
+3. **Root Directory:** click **Edit**, set to `witco_backend`, then **Continue**.
+4. **Environment Variables** (add these in the project’s Settings → Environment Variables):
    - `DB` – MongoDB connection string (e.g. Atlas URI)
    - `JWT_SECRET_KEY` – secret for JWT
-   - Optional: `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_NUMBER` for SMS/OTP
-4. Deploy. Note the backend URL (e.g. `https://witco-backend-xxx.vercel.app`).
+   - Optional: `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_NUMBER` for SMS
+5. **Deploy.** When it’s done, copy the backend URL (e.g. `https://witco-backend-xxx.vercel.app`). You need this for the frontend.
 
-**Uploads on Vercel:** The backend uses a local `uploads/` folder for signatures and photos. On Vercel the filesystem is ephemeral, so uploaded files are not persisted. For production you will need to store uploads in external storage (e.g. Vercel Blob or S3) and adapt the upload controller; until then, delivery signatures/photos may not persist across requests.
+**Uploads:** The backend uses a local `uploads/` folder. On Vercel the filesystem is ephemeral, so uploads (signatures, photos) are not persisted. For production you’d store them in Vercel Blob or S3; until then they may not persist.
 
-### 2. Deploy the frontend
+### 2. Frontend project
 
-1. In **`witco_frontend/src/environments/environment.prod.ts`**, set `apiUrl` to your backend Vercel URL (e.g. `https://witco-backend-xxx.vercel.app`). Do not add `/api/v1` — the app appends that.
-2. In Vercel, create another **new project** and import the same repo.
-3. Set **Root Directory** to `witco_frontend`.
-4. Build and output are configured in `vercel.json` (production build, output `dist`). If the build fails with an OpenSSL-related error (common with Angular 8 on Node 18+), add an environment variable `NODE_OPTIONS` = `--openssl-legacy-provider` in the Vercel project settings. Deploy.
+1. **Add New** → **Project** again and import the **same repo**.
+2. **Root Directory:** set to `witco_frontend`, then **Continue**.
+3. **Environment Variables:**
+   - `NG_APP_API_URL` – set to your **backend URL** from step 1 (e.g. `https://witco-backend-xxx.vercel.app`). No trailing slash; the app adds `/api/v1` itself.
+   - If the build fails with an OpenSSL error (Angular 8 on Node 18+), add `NODE_OPTIONS` = `--openssl-legacy-provider`.
+4. **Deploy.** The frontend build runs `node scripts/set-env.js` (which reads `NG_APP_API_URL`) then builds; the app will call your backend API.
 
-The frontend will call your backend at `apiUrl + '/api/v1/...'`.
-
-### 3. Optional: single repo, two projects
-
-If your repo is a monorepo at the root (e.g. `Witco/` with `witco_backend/` and `witco_frontend/`), add both projects in Vercel and set each project’s Root Directory to the corresponding folder.
+That’s it. Both projects will redeploy on every push to the repo (or on the branch you connected).
 
 ---
 
