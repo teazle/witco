@@ -3,5 +3,6 @@
   "buildCommand": "node scripts/set-env.js && npm run build -- --configuration production",
   "outputDirectory": "dist",
   "framework": null,
-  "installCommand": "npm install"
+  "installCommand": "npm install --legacy-peer-deps",
+  "regions": ["sin1"]
 }
