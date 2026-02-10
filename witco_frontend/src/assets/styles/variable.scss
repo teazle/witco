@@ -20,6 +20,7 @@ $custom-typography: mat-typography-config(
 
 $primary: mat-palette($mat-indigo, 600);
 $accent: mat-palette($mat-green, 600);
+$accent-color: mat-color($accent);
 $warn: mat-palette($mat-pink, 500);
 $theme: mat-light-theme($primary, $accent, $warn);
 $background: map-get($theme, background);

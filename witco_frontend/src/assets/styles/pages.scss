@@ -255,7 +255,7 @@ Chartistt chart css
         stroke:$themecolor;
     }
     .ct-series-b .ct-bar{
-        stroke:$accent;
+        stroke:$accent-color;
     }
 }
 
@@ -299,7 +299,7 @@ Chartistt chart css
         stroke:$themecolor
     }
     .ct-series-b .ct-slice-donut{
-        stroke:$accent
+        stroke:$accent-color;
     }
     .ct-series-c .ct-slice-donut{
         stroke:$purple
