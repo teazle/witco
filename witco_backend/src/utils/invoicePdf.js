@@ -362,24 +362,24 @@ module.exports = async function createInvoicePdf({
     rowTop = rowBottom;
   });
 
-  // Signatures
+  // Signatures / footer note
   const signatureY = Math.max(rowTop - 80, 110);
   const lineWidth = 160;
   const leftX = margin + 20;
   const rightX = width - margin - lineWidth - 20;
 
-  page.drawLine({
-    start: { x: leftX, y: signatureY },
-    end: { x: leftX + lineWidth, y: signatureY },
-    thickness: 1,
-    color: colorBlack,
-  });
-  page.drawText("Authorized Signature", {
-    x: leftX + 10,
-    y: signatureY - 14,
-    size: 9,
-    font: regular,
-    color: colorBlack,
+  const notice = "This is a computer-generated Delivery Order, no signatory is required";
+  const noticeLines = wrapText(notice, regular, 9, lineWidth + 60);
+  let noticeY = signatureY + 6;
+  noticeLines.forEach((line) => {
+    page.drawText(line, {
+      x: leftX,
+      y: noticeY,
+      size: 9,
+      font: regular,
+      color: colorBlack,
+    });
+    noticeY -= 12;
   });
 
   page.drawLine({
@@ -395,25 +395,6 @@ module.exports = async function createInvoicePdf({
     font: regular,
     color: colorBlack,
   });
-
-  // Company logo as authorized signature
-  try {
-    const logoBytes = await loadLogoBytes();
-    const logoImage = await pdfDoc.embedPng(logoBytes);
-    const maxSigWidth = 120;
-    const maxSigHeight = 40;
-    const sigScale = Math.min(maxSigWidth / logoImage.width, maxSigHeight / logoImage.height);
-    const sigWidth = logoImage.width * sigScale;
-    const sigHeight = logoImage.height * sigScale;
-    page.drawImage(logoImage, {
-      x: leftX + (lineWidth - sigWidth) / 2,
-      y: signatureY + 2,
-      width: sigWidth,
-      height: sigHeight,
-    });
-  } catch (err) {
-    // Logo is optional; continue without it.
-  }
 
   try {
     const signBytes = await getBytesFromStorage(

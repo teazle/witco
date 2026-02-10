@@ -21,3 +21,5 @@ witco_frontend/.angular/
 .DS_Store
 *.log
 .playwright-mcp/
+.playwright-cli/
+output/
