@@ -16,6 +16,7 @@ router.post("/suggest-dispatch", JobController.suggestDispatch);
 router.post("/parse-document", JobController.parseDocument);
 router.post("/dispatch-plan/:id/apply", JobController.applyDispatchPlan);
 router.post("/dispatch-plan/:id/undo", JobController.undoDispatchPlan);
+router.get("/dispatch-status", JobController.dispatchStatus);
 // router.post("/payment-satus", JobController.paymentStatus);
 router.post("/delivered", JobController.delivered);
 router.post("/invoice", JobController.invoice);

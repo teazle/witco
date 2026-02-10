@@ -56,6 +56,7 @@ export class DeliveryOrderComponent implements OnInit {
   lastDispatchPlanKey = 'lastDispatchPlanId';
   depotAddress = '';
   etaSource = '';
+  orsStatus: any = null;
 
   @ViewChild('fromInput', { static: false }) fromInput: ElementRef;
   @ViewChild('toInput', { static: false }) toInput: ElementRef;
@@ -73,6 +74,7 @@ export class DeliveryOrderComponent implements OnInit {
   ngOnInit() {
     this.loadJobs();
     this.getAllDriver();
+    this.loadDispatchStatus();
   }
 
   loadJobs() {
@@ -101,6 +103,14 @@ export class DeliveryOrderComponent implements OnInit {
     this.authService.getData('driver/getSelectAll').subscribe((res: any) => {
       this.driverDetails = res.data || [];
       this.refreshColumns();
+    });
+  }
+
+  loadDispatchStatus() {
+    this.authService.getData('jobs/dispatch-status').subscribe((res: any) => {
+      this.orsStatus = res.data || null;
+    }, () => {
+      this.orsStatus = null;
     });
   }
 

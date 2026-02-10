@@ -1,0 +1,52 @@
+mat-card {
+  margin: 16px;
+}
+
+.dash-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.dash-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.dash-card {
+  padding: 16px;
+}
+
+.dash-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid #eee;
+  font-size: 13px;
+}
+
+.dash-row:last-child {
+  border-bottom: none;
+}
+
+.dash-loading {
+  margin-top: 12px;
+  color: #666;
+}
+
+.dash-error {
+  margin-top: 12px;
+  color: #d32f2f;
+}
+
+.ok {
+  color: #2e7d32;
+  font-weight: 600;
+}
+
+.bad {
+  color: #c62828;
+  font-weight: 600;
+}

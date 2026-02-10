@@ -45,11 +45,11 @@ export const AppRoutes: Routes = [
         canActivate: [RoleGuard],
         loadChildren: './starter/starter.module#StarterModule'
       },
-      // {
-      //   path: 'dashboard',
-      //   canActivate: [RoleGuard],
-      //   loadChildren: './dashboard/dashboard.module#DashboardModule'
-      // },
+      {
+        path: 'dashboard',
+        canActivate: [RoleGuard],
+        loadChildren: './dashboard/dashboard.module#DashboardModule'
+      },
       // {
       //   path: 'dashboard-driver',
       //   canActivate: [DriverGuardGuard],

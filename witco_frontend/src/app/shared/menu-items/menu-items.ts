@@ -25,12 +25,12 @@ export interface Menu {
 }
 
 const MENUITEMS = [
-  // {
-  //   state: 'dashboard',
-  //   name: 'Dashboard',
-  //   type: 'link',
-  //   icon: 'dashboard'
-  // },
+  {
+    state: 'dashboard',
+    name: 'Dashboard',
+    type: 'link',
+    icon: 'dashboard'
+  },
   {
     state: 'starter',
     name: 'Drivers',

@@ -1289,6 +1289,34 @@ exports.undoDispatchPlan = catchAsync(async (req, res, next) => {
     message: "Dispatch plan undone",
   });
 });
+
+exports.dispatchStatus = catchAsync(async (req, res, next) => {
+  const now = Date.now();
+  const last24h = new Date(now - 24 * 60 * 60 * 1000);
+  const last7d = new Date(now - 7 * 24 * 60 * 60 * 1000);
+
+  const [total, recent24h, recent7d] = await Promise.all([
+    GeocodeCache.countDocuments(),
+    GeocodeCache.countDocuments({ lastUsedAt: { $gte: last24h } }),
+    GeocodeCache.countDocuments({ lastUsedAt: { $gte: last7d } }),
+  ]);
+
+  res.status(200).json({
+    status: "success",
+    data: {
+      ors: {
+        enabled: Boolean(ORS_API_KEY),
+        baseUrl: ORS_BASE_URL,
+        defaultDepot: ORS_DEFAULT_DEPOT_ADDRESS || "",
+      },
+      geocodeCache: {
+        total,
+        recent24h,
+        recent7d,
+      },
+    },
+  });
+});
 // function get_do_number(){
         
 //   let key="Do-";

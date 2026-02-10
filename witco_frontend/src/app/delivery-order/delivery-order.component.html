@@ -43,6 +43,11 @@
       <button mat-stroked-button color="primary" type="button" (click)="applyAiSuggestions()">
         AI Suggest
       </button>
+      <mat-chip-list *ngIf="orsStatus?.ors">
+        <mat-chip [color]="orsStatus.ors.enabled ? 'primary' : 'warn'" selected>
+          ORS: {{orsStatus.ors.enabled ? 'Enabled' : 'Disabled'}}
+        </mat-chip>
+      </mat-chip-list>
       <mat-chip-list *ngIf="etaSource">
         <mat-chip [color]="etaSource === 'ors-directions' ? 'primary' : 'warn'" selected>
           ETA: {{etaSource === 'ors-directions' ? 'ORS' : 'Heuristic'}}
