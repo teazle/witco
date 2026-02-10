@@ -68,6 +68,37 @@ function extractBlockAfter(label, lines, maxLines = 4) {
   return block;
 }
 
+function extractInlineOrBlock(label, lines, maxLines = 4) {
+  const labelLower = label.toLowerCase();
+  const index = lines.findIndex((line) =>
+    line.toLowerCase().includes(labelLower)
+  );
+  if (index === -1) return [];
+  const line = lines[index];
+  const lower = line.toLowerCase();
+  const pos = lower.indexOf(labelLower);
+  let inline = line.slice(pos + labelLower.length).trim();
+  inline = inline.replace(/^[:\-]\s*/, "").trim();
+  if (inline) return [inline];
+  return extractBlockAfter(label, lines, maxLines);
+}
+
+function extractPhone(lines, text) {
+  const phoneLine = lines.find((line) =>
+    /(phone|tel|mobile|contact)/i.test(line)
+  );
+  const phoneRegex = /(\+?\d[\d\s-]{7,})/;
+  const candidate =
+    (phoneLine && phoneLine.match(phoneRegex)?.[1]) ||
+    text.match(phoneRegex)?.[1];
+  if (!candidate) return "";
+  const digits = candidate.replace(/\D/g, "");
+  if (digits.length <= 6) return "";
+  if (digits.length === 8) return digits;
+  if (digits.length >= 10) return digits;
+  return candidate.trim();
+}
+
 function parseGoodsLines(lines) {
   const goods = [];
   lines.forEach((line) => {
@@ -127,19 +158,19 @@ function parseDocumentText(rawText) {
   }
 
   const deliveryCandidates = [
-    extractBlockAfter("Delivery Address", nonEmptyLines),
-    extractBlockAfter("Ship To", nonEmptyLines),
-    extractBlockAfter("Deliver To", nonEmptyLines),
+    extractInlineOrBlock("Delivery Address", nonEmptyLines),
+    extractInlineOrBlock("Ship To", nonEmptyLines),
+    extractInlineOrBlock("Deliver To", nonEmptyLines),
   ];
   const deliveryBlock = deliveryCandidates.find((block) => block.length) || [];
   const deliveryAddress = deliveryBlock.length ? deliveryBlock.join(", ") : "";
 
-  const billToBlock = extractBlockAfter("Bill To", nonEmptyLines);
+  const billToBlock = extractInlineOrBlock("Bill To", nonEmptyLines);
   const customerLine = billToBlock[0] || "";
   const companyLine = billToBlock[1] || "";
 
   const emailMatch = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
-  const phoneMatch = text.match(/(\+?\d[\d\s-]{6,})/);
+  const phoneMatch = extractPhone(nonEmptyLines, text);
 
   const goodsStartIndex = nonEmptyLines.findIndex((line) =>
     /description|item|product/i.test(line)
@@ -162,7 +193,7 @@ function parseDocumentText(rawText) {
     customerName: customerLine,
     customerCompany: companyLine,
     customerEmail: emailMatch ? emailMatch[0] : "",
-    customerPhone: phoneMatch ? phoneMatch[0].trim() : "",
+    customerPhone: phoneMatch || "",
     goods,
     warnings,
   };
