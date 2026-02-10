@@ -135,7 +135,7 @@ export class DeliveryOrderComponent implements OnInit {
       this.dispatchPlanId = res.data && res.data.planId ? res.data.planId : null;
       this.etaSource = (res.data && res.data.assumptions && res.data.assumptions.routing) || 'heuristic';
       const jobMap = new Map<string, DispatchJob>();
-      this.unassigned.jobs.forEach((job) => jobMap.set(job._id, job));
+      this.unassigned.jobs.forEach((job) => jobMap.set(String(job._id), job));
 
       this.aiBaseTime = new Date();
       this.aiMode = true;
@@ -145,18 +145,18 @@ export class DeliveryOrderComponent implements OnInit {
       });
 
       assignments.forEach((assignment) => {
-        const column = this.columns.find((col) => col.driverId === assignment.driver_id);
+        const column = this.columns.find((col) => String(col.driverId) === String(assignment.driver_id));
         if (!column) return;
         const assignedJobs: DispatchJob[] = [];
         (assignment.jobs || []).forEach((jobSuggestion) => {
-          const job = jobMap.get(jobSuggestion.job_id);
+          const job = jobMap.get(String(jobSuggestion.job_id));
           if (job) {
             assignedJobs.push({
               ...job,
               etaMinutes: jobSuggestion.etaMinutes,
               etaTime: jobSuggestion.etaTime
             });
-            jobMap.delete(jobSuggestion.job_id);
+            jobMap.delete(String(jobSuggestion.job_id));
           }
         });
         column.jobs = assignedJobs;
