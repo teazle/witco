@@ -1,42 +1,53 @@
-<mat-card>
-  <div class="dash-header">
-    <h3>Routing & Geocode Status</h3>
-    <button mat-stroked-button type="button" (click)="loadStatus()">Refresh</button>
+<div class="dash-page">
+  <div class="dash-hero">
+    <div>
+      <p class="dash-eyebrow">System Health</p>
+      <h1>Routing &amp; Geocode Status</h1>
+      <p class="dash-subtitle">Live service checks for routing, caching, and delivery operations.</p>
+    </div>
+    <div class="dash-actions">
+      <button mat-stroked-button type="button" (click)="loadStatus()">Refresh</button>
+    </div>
   </div>
-  <div *ngIf="loading" class="dash-loading">Loading...</div>
-  <div *ngIf="error" class="dash-error">{{error}}</div>
-  <div class="dash-grid" *ngIf="status">
-    <mat-card class="dash-card">
-      <h4>ORS</h4>
-      <div class="dash-row">
-        <span>Status</span>
-        <span [class.ok]="status.ors?.enabled" [class.bad]="!status.ors?.enabled">
-          {{status.ors?.enabled ? 'Enabled' : 'Disabled'}}
-        </span>
-      </div>
-      <div class="dash-row">
-        <span>Base URL</span>
-        <span>{{status.ors?.baseUrl || '-'}}</span>
-      </div>
-      <div class="dash-row">
-        <span>Default Depot</span>
-        <span>{{status.ors?.defaultDepot || '-'}}</span>
-      </div>
-    </mat-card>
-    <mat-card class="dash-card">
-      <h4>Geocode Cache</h4>
-      <div class="dash-row">
-        <span>Total Cached</span>
-        <span>{{status.geocodeCache?.total || 0}}</span>
-      </div>
-      <div class="dash-row">
-        <span>Used (24h)</span>
-        <span>{{status.geocodeCache?.recent24h || 0}}</span>
-      </div>
-      <div class="dash-row">
-        <span>Used (7d)</span>
-        <span>{{status.geocodeCache?.recent7d || 0}}</span>
-      </div>
-    </mat-card>
-  </div>
-</mat-card>
+
+  <mat-card class="dash-panel">
+    <div *ngIf="loading" class="dash-loading">Loading...</div>
+    <div *ngIf="error" class="dash-error">{{error}}</div>
+    <div class="dash-grid" *ngIf="status">
+      <mat-card class="dash-card">
+        <div class="dash-card__header">
+          <h4>ORS</h4>
+          <span class="dash-pill" [class.ok]="status.ors?.enabled" [class.bad]="!status.ors?.enabled">
+            {{status.ors?.enabled ? 'Enabled' : 'Disabled'}}
+          </span>
+        </div>
+        <div class="dash-row">
+          <span>Base URL</span>
+          <span>{{status.ors?.baseUrl || '-'}}</span>
+        </div>
+        <div class="dash-row">
+          <span>Default Depot</span>
+          <span>{{status.ors?.defaultDepot || '-'}}</span>
+        </div>
+      </mat-card>
+      <mat-card class="dash-card">
+        <div class="dash-card__header">
+          <h4>Geocode Cache</h4>
+          <span class="dash-pill neutral">Live</span>
+        </div>
+        <div class="dash-row">
+          <span>Total Cached</span>
+          <span>{{status.geocodeCache?.total || 0}}</span>
+        </div>
+        <div class="dash-row">
+          <span>Used (24h)</span>
+          <span>{{status.geocodeCache?.recent24h || 0}}</span>
+        </div>
+        <div class="dash-row">
+          <span>Used (7d)</span>
+          <span>{{status.geocodeCache?.recent7d || 0}}</span>
+        </div>
+      </mat-card>
+    </div>
+  </mat-card>
+</div>

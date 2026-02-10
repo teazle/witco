@@ -13,7 +13,9 @@ mat-sidenav {
   padding-top: 0px;
 }
 #snav{
-    box-shadow: 1px 0px 20px rgba(0, 0, 0, 0.08);
+    background: $sidebar;
+    border-right: 1px solid $border;
+    box-shadow: 8px 0px 24px rgba(15, 23, 42, 0.04);
     .mat-drawer-inner-container{
         overflow:visible;
         height: auto;
@@ -30,7 +32,9 @@ mat-sidenav {
             &:hover{
                 background: none;
                 > a{
-                  color:#41419e;
+                  color:$themecolor;
+                  background: $light-primary;
+                  border-radius: $radius;
                 }
             }
         }

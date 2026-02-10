@@ -32,7 +32,7 @@ File: scss
 html .page-wrapper{
     height:calc(100vh - 64px);
     .page-content{
-        padding: 15px;
+        padding: 24px;
     }
 }
 
@@ -73,8 +73,35 @@ html .page-wrapper{
 }
 
 .ngx-datatable.material{
-    box-shadow: none;
+    box-shadow: 0 18px 36px rgba(15, 23, 42, 0.06);
     border:1px solid $border;
+    border-radius: $radius;
+    overflow: hidden;
+    background: $white;
+    .datatable-header{
+        background: $light;
+        border-bottom: 1px solid $border;
+    }
+    .datatable-header .datatable-header-cell{
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 11px;
+        color: $headingtext;
+        padding: 14px 16px;
+    }
+    .datatable-body-row{
+        border-bottom: 1px solid $table-border;
+        transition: background 0.2s ease;
+        &:hover{
+            background: $light;
+        }
+    }
+    .datatable-body-cell{
+        padding: 12px 16px;
+        font-size: 13px;
+        color: $bodytext;
+    }
 }
 /*******************
  Calendar page
@@ -225,27 +252,27 @@ Chartistt chart css
 ******************/
 .barchrt{
     .ct-series-a .ct-bar{
-        stroke:$success;
+        stroke:$themecolor;
     }
     .ct-series-b .ct-bar{
-        stroke:$info;
+        stroke:$accent;
     }
 }
 
 .linearea {
   height: 280px;
   .ct-series-a .ct-area {
-    fill-opacity: 0.05;
-    fill: $success;
+    fill-opacity: 0.08;
+    fill: $themecolor;
   }
   .ct-series-a .ct-line,
   .ct-series-a .ct-point {
-    stroke: $success;
+    stroke: $themecolor;
     stroke-width: 2px;
   }
   .ct-series-b .ct-area {
     fill: $info;
-    fill-opacity: 0.1;
+    fill-opacity: 0.08;
   }
   .ct-series-b .ct-line,
   .ct-series-b .ct-point {
@@ -254,7 +281,7 @@ Chartistt chart css
   }
   .ct-series-c .ct-area {
     fill: $danger;
-    fill-opacity: 0.1;
+    fill-opacity: 0.08;
   }
   .ct-series-c .ct-line,
   .ct-series-c .ct-point {
@@ -269,10 +296,10 @@ Chartistt chart css
 }
 .piechart{
     .ct-series-a .ct-slice-donut{
-        stroke:$info
+        stroke:$themecolor
     }
     .ct-series-b .ct-slice-donut{
-        stroke:$success
+        stroke:$accent
     }
     .ct-series-c .ct-slice-donut{
         stroke:$purple
@@ -313,10 +340,10 @@ Chartis tooltip scss
   display: inline-block;
   opacity: 0;
   min-width: 50px;
-  padding: 5px 10px;
-  border-radius: 5px;
-  background: #313131;
-  color: #fff;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: $inverse;
+  color: $white;
   font-weight: 500;
   text-align: center;
   pointer-events: none;
@@ -349,13 +376,14 @@ Chartis tooltip scss
 Smart table
 ******************/
 .smart-table tr td, .smart-table tr th{
-    padding:15px!important;
+    padding:12px 14px!important;
 }
 .ng2-smart-action-add-add{
    color:$white!important;
    background: $themecolor;
-   padding: 8px 15px;    
-   border-radius: $radius;    
+   padding: 8px 16px;    
+   border-radius: $radius; 
+   box-shadow: 0 12px 24px rgba(74, 79, 184, 0.2);   
 }
 .ng2-smart-pagination-nav{
     margin-left: auto;
@@ -364,7 +392,13 @@ Smart table
     line-height: 1rem;
 }
 .ng2-smart-filter .form-control {
-  border: 1px solid $border;
-  border-radius: 0.25rem;
+  border: 1px solid $form-brd;
+  border-radius: $radius;
   min-height: 38px;
+  padding: 8px 12px;
+  font-size: 13px;
+  &:focus{
+    border-color: $themecolor;
+    box-shadow: 0 0 0 3px rgba(74, 79, 184, 0.12);
+  }
 }

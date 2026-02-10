@@ -1,30 +1,92 @@
-mat-card {
-  margin: 16px;
+.dash-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
-.dash-header {
+.dash-hero {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.dash-eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  font-size: 11px;
+  color: #7a8294;
+  margin: 0 0 8px;
+}
+
+.dash-hero h1 {
+  margin: 0;
+  font-size: 30px;
+  color: #1f2433;
+}
+
+.dash-subtitle {
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: #5b6474;
+  max-width: 520px;
+}
+
+.dash-panel {
+  margin: 0;
+  padding: 6px;
+  border-radius: 16px;
 }
 
 .dash-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 16px;
-  margin-top: 16px;
+  margin-top: 4px;
 }
 
 .dash-card {
   padding: 16px;
+  border-radius: 14px;
+  border: 1px solid #e1e5ef;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
+}
+
+.dash-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.dash-card h4 {
+  margin: 0;
+  font-size: 16px;
+  color: #1f2433;
+}
+
+.dash-pill {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #eef0ff;
+  color: #4a4fb8;
+}
+
+.dash-pill.neutral {
+  background: #edf5f2;
+  color: #2a8b63;
 }
 
 .dash-row {
   display: flex;
   justify-content: space-between;
-  padding: 6px 0;
-  border-bottom: 1px solid #eee;
+  padding: 8px 0;
+  border-bottom: 1px solid #e7eaf3;
   font-size: 13px;
+  color: #5b6474;
 }
 
 .dash-row:last-child {
@@ -33,20 +95,24 @@ mat-card {
 
 .dash-loading {
   margin-top: 12px;
-  color: #666;
+  color: #5b6474;
 }
 
 .dash-error {
   margin-top: 12px;
-  color: #d32f2f;
+  color: #e7575f;
 }
 
 .ok {
-  color: #2e7d32;
-  font-weight: 600;
+  color: #2a8b63;
 }
 
 .bad {
-  color: #c62828;
-  font-weight: 600;
+  color: #e7575f;
+}
+
+@media (max-width: 720px) {
+  .dash-hero h1 {
+    font-size: 24px;
+  }
 }

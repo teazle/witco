@@ -1,40 +1,47 @@
-<div class="header_login">
-  <img src="../../assets/imgs/Logo.svg" alt="homepage" class="dark-logo">
-</div>
-<div class="login-wrapper" fxLayout="row" fxLayoutAlign="center center">
-  <mat-card class="box">
-    <mat-card-title>
-        <h2>Login</h2>
-    </mat-card-title>
-    
-
-    <form class="example-form" name="loginForm" [formGroup]="loginForm" (ngSubmit)="onSubmit(loginForm.value)" novalidate>
-      <mat-card-content>
-        <mat-form-field class="example-full-width">
-          <input matInput formControlName = "email" placeholder="Email" autocomplete="off">
-          <mat-error *ngIf="loginFormErrors.email.required">
-            Email is required
-          </mat-error>
-          <mat-error *ngIf="!loginFormErrors.email.required && loginFormErrors.email.email">
-            Please enter a valid email address
-          </mat-error>
-        </mat-form-field>
-
-        <mat-form-field class="example-full-width">
-          <input matInput formControlName="password" [type]="showPassword ? 'text' : 'password'" placeholder="Password" autocomplete="off">
-          <button mat-icon-button matSuffix type="button" (click)="togglePasswordVisibility()" aria-label="Toggle password visibility">
-            <mat-icon>{{showPassword ? 'visibility': 'visibility_off'}}</mat-icon>
-          </button>
-          <mat-error *ngIf="loginFormErrors.password.required">
-                        password is required
-                    </mat-error>
-        </mat-form-field>
-      </mat-card-content>
-      <div class="btn-block" >
-        <button mat-raised-button color="primary" [disabled]="loginForm.invalid">Login</button>
+<div class="login-page">
+  <div class="login-video" aria-hidden="true">
+    <video class="login-video__media" autoplay muted loop playsinline poster="assets/imgs/login-poster.jpg">
+      <source src="assets/videos/login-bg.mp4" type="video/mp4">
+    </video>
+  </div>
+  <div class="login-overlay"></div>
+  <div class="login-wrapper" fxLayout="row" fxLayoutAlign="center center">
+    <div class="login-card glass-card">
+      <div class="login-brand">
+        <img src="../../assets/imgs/Logo.svg" alt="Witco logo" class="brand-logo">
+        <h1>Witco Envirotech</h1>
+        <div class="brand-accent"></div>
+        <p class="brand-subtitle">Electronic Delivery Order System</p>
+        <p class="brand-meta">Water &amp; Wastewater Treatment Solutions</p>
       </div>
-      <p fxLayoutAlign="center center" routerLink="/forget-password" style="cursor: pointer;">Forget Password ?</p>
+      <form class="example-form" name="loginForm" [formGroup]="loginForm" (ngSubmit)="onSubmit(loginForm.value)" novalidate>
+        <mat-card-content>
+          <mat-form-field class="example-full-width glass-field">
+            <input matInput formControlName="email" placeholder="Email" autocomplete="off">
+            <mat-error *ngIf="loginFormErrors.email.required">
+              Email is required
+            </mat-error>
+            <mat-error *ngIf="!loginFormErrors.email.required && loginFormErrors.email.email">
+              Please enter a valid email address
+            </mat-error>
+          </mat-form-field>
 
-    </form>
-  </mat-card>
+          <mat-form-field class="example-full-width glass-field">
+            <input matInput formControlName="password" [type]="showPassword ? 'text' : 'password'" placeholder="Password" autocomplete="off">
+            <button mat-icon-button matSuffix type="button" (click)="togglePasswordVisibility()" aria-label="Toggle password visibility">
+              <mat-icon>{{showPassword ? 'visibility': 'visibility_off'}}</mat-icon>
+            </button>
+            <mat-error *ngIf="loginFormErrors.password.required">
+              password is required
+            </mat-error>
+          </mat-form-field>
+        </mat-card-content>
+        <div class="btn-block">
+          <button mat-raised-button color="primary" class="login-primary" [disabled]="loginForm.invalid">Login</button>
+        </div>
+        <p class="login-forgot" fxLayoutAlign="center center" routerLink="/forget-password">Forgot Password?</p>
+      </form>
+    </div>
+  </div>
+  <p class="login-attribution">© 2026 Witco. All rights reserved.</p>
 </div>

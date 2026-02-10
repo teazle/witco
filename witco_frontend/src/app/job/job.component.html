@@ -1,5 +1,23 @@
-<mat-card>
-    <div class="upload-panel">
+<div class="job-page">
+    <div class="job-header">
+        <div>
+            <p class="job-eyebrow">Job Builder</p>
+            <h1>Build a Delivery Job</h1>
+            <p class="job-subtitle">Upload a PO or invoice, then complete customer and goods details in a guided flow.</p>
+        </div>
+        <div class="job-header__stats">
+            <div class="stat-card">
+                <span>Step 1</span>
+                <strong>Customer</strong>
+            </div>
+            <div class="stat-card">
+                <span>Step 2</span>
+                <strong>Goods</strong>
+            </div>
+        </div>
+    </div>
+    <mat-card class="job-card">
+        <div class="upload-panel">
         <div class="upload-box">
             <div class="upload-header">
                 <h4>Auto-fill from PO / Invoice</h4>
@@ -67,7 +85,7 @@
             </mat-chip-list>
         </div>
     </div>
-    <mat-horizontal-stepper #stepper linear>
+        <mat-horizontal-stepper #stepper class="job-stepper" linear>
         <mat-step [stepControl]="customerForm">
             <ng-template matStepLabel>Fill out customer Form</ng-template>
             <div class="main">
@@ -85,15 +103,16 @@
                         </mat-list>
                     </div>
                     <mat-card-content>
+                        <div class="section-title">Customer profile</div>
                         <div class="wrapper">
                             <form class="example-form" [formGroup]="customerForm" (ngSubmit)="onSubmit()">
-                                <mat-card-content>
+                                <mat-card-content class="form-grid">
                                     <mat-form-field class="example-full-width">
                                         <input matInput formControlName="firstName" placeholder="First Name"
                                             autocomplete="off">
 
                                     </mat-form-field>
-                                    <div
+                                    <div class="field-error"
                                         *ngIf="customerForm.get('firstName').invalid && (customerForm.get('firstName').dirty || customerForm.get('firstName').touched)">
                                         <mat-error *ngIf=" customerForm.get('firstName').hasError('required')">
                                             First Name is Required!
@@ -106,7 +125,7 @@
                                         <input matInput formControlName="lastName" placeholder="Last Name"
                                             autocomplete="off">
                                     </mat-form-field>
-                                    <div
+                                    <div class="field-error"
                                         *ngIf="customerForm.get('lastName').dirty || customerForm.get('lastName').touched">
                                         <mat-error *ngIf="customerForm.get('lastName').hasError('pattern')">
                                             Last Name is invalid.
@@ -119,14 +138,14 @@
                                     <mat-form-field class="example-full-width">
                                         <input matInput formControlName="email" placeholder="Email" autocomplete="off">
                                     </mat-form-field>
-                                    <div *ngIf="customerForm.get('email').dirty || customerForm.get('email').touched">
+                                    <div class="field-error" *ngIf="customerForm.get('email').dirty || customerForm.get('email').touched">
                                         <mat-error *ngIf="customerForm.get('email').hasError('pattern')">
                                             Email is invalid.
                                         </mat-error>
                                     </div>
                                     <div class="phoneFild">
                                         <mat-form-field>
-                                            <mat-label> country code</mat-label>
+                                            <mat-label>Country code</mat-label>
                                             <mat-select formControlName="code">
                                                 <mat-option value="+65">
                                                     +65
@@ -138,7 +157,7 @@
                                             placeholder="Phone Number" autocomplete="off" min-length="8" max-length="8">
                                         </mat-form-field>
                                     </div>
-                                    <div
+                                    <div class="field-error"
                                         *ngIf="customerForm.get('phone').invalid && (customerForm.get('phone').dirty || customerForm.get('phone').touched)">
                                         <mat-error *ngIf="customerForm.get('phone').hasError('required')">
                                             Number Is Required!
@@ -149,15 +168,15 @@
                                         </mat-error>
                                     </div>
 
-                                    <mat-form-field class="example-full-width">
+                                    <mat-form-field class="example-full-width span-2">
                                         <input matInput formControlName="address" placeholder="Address" type="text"
                                             autocomplete="off">
                                     </mat-form-field>
-                                    <mat-form-field class="example-full-width">
+                                    <mat-form-field class="example-full-width span-2">
                                         <input matInput formControlName="deliveryAddress" placeholder="Delivery Address"
                                             autocomplete="off">
                                     </mat-form-field>
-                                    <div
+                                    <div class="field-error"
                                         *ngIf="customerForm.get('deliveryAddress').invalid && (customerForm.get('deliveryAddress').dirty || customerForm.get('deliveryAddress').touched)">
                                         <mat-error *ngIf="customerForm.get('deliveryAddress').hasError('required')">
                                             Delivery Address is Required!
@@ -168,11 +187,15 @@
                                             autocomplete="off">
                                     </mat-form-field>
                                 </mat-card-content>
-                                <div class="btn">
-                                    <button mat-raised-button color="primary" type="submit"
-                                        *ngIf="!searchCustomer" [disabled]="show ? customerForm?.invalid || !areFormControlsSame() : areFormControlsSame()">{{!searchCustomer? 'save' : 'update'}}</button>
-                                    <button mat-raised-button color="primary" type="button" matStepperNext
-                                        [disabled]="show ? !areFormControlsSame() || saveCustomerDetails  : changeInputBool ?  !areFormControlsSame() : !changetext">next</button>
+                                <div class="form-actions">
+                                    <div class="actions-left">
+                                        <button mat-stroked-button color="primary" type="submit"
+                                            *ngIf="!searchCustomer" [disabled]="show ? customerForm?.invalid || !areFormControlsSame() : areFormControlsSame()">{{!searchCustomer? 'save' : 'update'}}</button>
+                                    </div>
+                                    <div class="actions-right">
+                                        <button mat-raised-button color="primary" type="button" matStepperNext
+                                            [disabled]="show ? !areFormControlsSame() || saveCustomerDetails  : changeInputBool ?  !areFormControlsSame() : !changetext">next</button>
+                                    </div>
                                 </div>
                             </form>
                         </div>
@@ -184,29 +207,32 @@
             <ng-template matStepLabel>Fill out Goods Form</ng-template>
             <form class="example-form" [formGroup]="goodsForm" (ngSubmit)="onsubmitGood()">
                 <mat-card-content>
-                    <mat-form-field class="example-full-width">
-                        <input matInput formControlName="inv_temp" placeholder="PO Number" autocomplete="off">
-                    </mat-form-field>
-                  
-                    <mat-form-field class="example-full-width">
-                        <input matInput formControlName="invoiceNumber" placeholder="DO Number" autocomplete="off">
-                    </mat-form-field>
-                    <div
-                        *ngIf="goodsForm.get('invoiceNumber').invalid && (goodsForm.get('invoiceNumber').dirty || goodsForm.get('invoiceNumber').touched)">
-                        <mat-error *ngIf="goodsForm.get('invoiceNumber').hasError('required')">
-                            DO Number is Required!
-                        </mat-error>
-                    </div>
-                    <mat-form-field class="example-full-width">
-                        <input matInput formControlName="zipcode" placeholder="Zip Code"
-                            autocomplete="off">
-                    </mat-form-field>
-                    <div
-                    *ngIf="goodsForm.get('zipcode').invalid && (goodsForm.get('zipcode').dirty || goodsForm.get('zipcode').touched)">
+                    <div class="section-title">Goods details</div>
+                    <div class="form-grid">
+                        <mat-form-field class="example-full-width">
+                            <input matInput formControlName="inv_temp" placeholder="PO Number" autocomplete="off">
+                        </mat-form-field>
+                      
+                        <mat-form-field class="example-full-width">
+                            <input matInput formControlName="invoiceNumber" placeholder="DO Number" autocomplete="off">
+                        </mat-form-field>
+                        <div class="field-error"
+                            *ngIf="goodsForm.get('invoiceNumber').invalid && (goodsForm.get('invoiceNumber').dirty || goodsForm.get('invoiceNumber').touched)">
+                            <mat-error *ngIf="goodsForm.get('invoiceNumber').hasError('required')">
+                                DO Number is Required!
+                            </mat-error>
+                        </div>
+                        <mat-form-field class="example-full-width span-2">
+                            <input matInput formControlName="zipcode" placeholder="Zip Code"
+                                autocomplete="off">
+                        </mat-form-field>
+                        <div class="field-error"
+                        *ngIf="goodsForm.get('zipcode').invalid && (goodsForm.get('zipcode').dirty || goodsForm.get('zipcode').touched)">
 
-                    <mat-error *ngIf="goodsForm.get('zipcode').hasError('pattern')">
-                        zipcode only contain 6 digit!
-                    </mat-error>
+                        <mat-error *ngIf="goodsForm.get('zipcode').hasError('pattern')">
+                            zipcode only contain 6 digit!
+                        </mat-error>
+                        </div>
                     </div>
 
                     <div class="goods-header">
@@ -253,11 +279,17 @@
                         </ng-container>
                     </ng-container>
                 </mat-card-content>
-                <div class="btn">
-                    <button mat-raised-button color="primary" type="submit"
-                        [disabled]="goodsForm?.invalid">submit</button>
+                <div class="form-actions">
+                    <div class="actions-left">
+                        <button mat-stroked-button type="button" matStepperPrevious>Back</button>
+                    </div>
+                    <div class="actions-right">
+                        <button mat-raised-button color="primary" type="submit"
+                            [disabled]="goodsForm?.invalid">submit</button>
+                    </div>
                 </div>
             </form>
         </mat-step>
-    </mat-horizontal-stepper>
-</mat-card>
+        </mat-horizontal-stepper>
+    </mat-card>
+</div>

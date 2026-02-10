@@ -29,7 +29,7 @@ body {
     overflow-x: hidden;
     color: $bodytext;
     font-weight: 300;
-    background: $inverse;
+    background: $bodycolor;
 }
 
 html {
@@ -889,29 +889,73 @@ Notify
 .btn-lg{
     line-height: 48px!important;
 }
+.mat-raised-button.mat-primary,
+.mat-flat-button.mat-primary{
+    background: $themecolor;
+    color: $white;
+    border-radius: $radius;
+    box-shadow: 0 16px 28px rgba(74, 79, 184, 0.25);
+}
+.mat-stroked-button.mat-primary{
+    border-color: $themecolor;
+    color: $themecolor;
+    border-radius: $radius;
+}
 /*******************
 froms
 *******************/
 .form-control{
-    border: 0px;
-    line-height: 25px;
-    padding: 10px;
+    border: 1px solid $form-brd;
+    line-height: 24px;
+    padding: 10px 12px;
     width: 100%;
-    font-size:$font-16;
+    font-size: 14px;
+    color: $headingtext;
+    background: $white;
+    border-radius: $radius;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    &:focus{
+        border-color: $themecolor;
+        box-shadow: 0 0 0 3px rgba(74, 79, 184, 0.15);
+    }
 }
 .mat-form-field-underline{
-    background-color: rgba(0, 0, 0, 0.25);
+    background-color: rgba(148, 156, 175, 0.4);
 }
 .mat-form-field{
    width: 100%;
+}
+.mat-form-field-appearance-legacy .mat-form-field-flex,
+.mat-form-field-appearance-standard .mat-form-field-flex{
+    background: $white;
+    border: 1px solid $form-brd;
+    border-radius: $radius;
+    padding: 0.55rem 0.75rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.mat-form-field-appearance-legacy.mat-focused .mat-form-field-flex,
+.mat-form-field-appearance-standard.mat-focused .mat-form-field-flex{
+    border-color: $themecolor;
+    box-shadow: 0 0 0 3px rgba(74, 79, 184, 0.15);
+}
+.mat-form-field-appearance-legacy .mat-form-field-infix,
+.mat-form-field-appearance-standard .mat-form-field-infix{
+    padding: 0.35rem 0;
+    border-top: 0;
+}
+.mat-form-field-appearance-legacy .mat-form-field-ripple,
+.mat-form-field-appearance-standard .mat-form-field-ripple{
+    background-color: $themecolor;
 }
 /*******************
 Mat card
 *******************/
 .mat-card{
-    box-shadow: 0px 5px 20px rgba(0, 0, 0, 0.05)!important;  
-    -webkit-box-shadow: 0px 5px 20px rgba(0, 0, 0, 0.05)!important; 
-    margin: 15px;
+    background: $white;
+    border: 1px solid $border;
+    box-shadow: 0 18px 36px rgba(15, 23, 42, 0.08)!important;  
+    -webkit-box-shadow: 0 18px 36px rgba(15, 23, 42, 0.08)!important; 
+    margin: 16px;
     padding: 0px!important;
     border-radius: $radius;
     
@@ -969,20 +1013,77 @@ Table
 .table{
     width: 100%;
     text-align: left;
+    border-collapse: collapse;
+    th, td{
+        padding: 12px 14px;
+        border-bottom: 1px solid $table-border;
+        font-size: 13px;
+        color: $bodytext;
+    }
+    th{
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 11px;
+        color: $headingtext;
+        background: $light;
+    }
 }
 .table-rasponsive{
     overflow:auto;
+    border: 1px solid $table-border;
+    border-radius: $radius;
+    background: $white;
     .mat-table{
         min-width: 280px;
+        background: transparent;
     }
     .mat-header-row{
+        background: $light;
         .mat-header-cell{
             white-space: nowrap;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-size: 11px;
+            color: $headingtext;
+            font-weight: 600;
         }
     }
     .mat-cell{
             white-space: nowrap;
+            color: $bodytext;
         }
+    .mat-row{
+        transition: background 0.2s ease;
+        &:hover{
+            background: $light;
+        }
+    }
+}
+.mat-table{
+    background: $white;
+    border-radius: $radius;
+    overflow: hidden;
+    .mat-header-row{
+        background: $light;
+    }
+    .mat-header-cell{
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 11px;
+        color: $headingtext;
+    }
+    .mat-cell{
+        color: $bodytext;
+        font-size: 13px;
+    }
+    .mat-row{
+        transition: background 0.2s ease;
+        &:hover{
+            background: $light;
+        }
+    }
 }
 /*******************
 Sparkline chart tooltip
