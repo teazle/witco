@@ -149,6 +149,8 @@ module.exports = async function createInvoicePdf({
 
   // Header right details
   const detailsX = width - margin - 200;
+  const valueX = detailsX + 85;
+  const valueMaxWidth = width - margin - valueX;
   let detailsY = height - margin - 5;
   page.drawText("DELIVERY ORDER", {
     x: detailsX,
@@ -166,6 +168,8 @@ module.exports = async function createInvoicePdf({
     ["Delivery Date:", deliveryDate ? `${deliveryDate} ${deliveryTime || ""}` : ""],
   ];
   details.forEach(([label, value]) => {
+    const lines = wrapText(String(value || ""), regular, 9, valueMaxWidth);
+    const safeLines = lines.length ? lines : [""];
     page.drawText(label, {
       x: detailsX,
       y: detailsY,
@@ -173,14 +177,24 @@ module.exports = async function createInvoicePdf({
       font: bold,
       color: colorPrimary,
     });
-    page.drawText(String(value), {
-      x: detailsX + 85,
+    page.drawText(safeLines[0], {
+      x: valueX,
       y: detailsY,
       size: 9,
       font: regular,
       color: colorPrimary,
     });
     detailsY -= lineHeight;
+    for (let i = 1; i < safeLines.length; i++) {
+      page.drawText(safeLines[i], {
+        x: valueX,
+        y: detailsY,
+        size: 9,
+        font: regular,
+        color: colorPrimary,
+      });
+      detailsY -= lineHeight;
+    }
   });
 
   // Messrs and address
@@ -207,13 +221,27 @@ module.exports = async function createInvoicePdf({
     font: bold,
     color: colorBlack,
   });
-  page.drawText(String(job.customer_deliveryAddress || ""), {
-    x: margin + 90,
+  const addressX = margin + 90;
+  const addressMaxWidth = width - margin - addressX;
+  const addressLines = wrapText(String(job.customer_deliveryAddress || ""), regular, 9, addressMaxWidth);
+  const safeAddressLines = addressLines.length ? addressLines : [""];
+  page.drawText(safeAddressLines[0], {
+    x: addressX,
     y: messrsY,
     size: 9,
     font: regular,
     color: colorBlack,
   });
+  for (let i = 1; i < safeAddressLines.length; i++) {
+    messrsY -= lineHeight;
+    page.drawText(safeAddressLines[i], {
+      x: addressX,
+      y: messrsY,
+      size: 9,
+      font: regular,
+      color: colorBlack,
+    });
+  }
 
   // Table
   const tableX = margin;
@@ -368,17 +396,38 @@ module.exports = async function createInvoicePdf({
     color: colorBlack,
   });
 
+  // Company logo as authorized signature
+  try {
+    const logoBytes = await loadLogoBytes();
+    const logoImage = await pdfDoc.embedPng(logoBytes);
+    const maxSigWidth = 120;
+    const maxSigHeight = 40;
+    const sigScale = Math.min(maxSigWidth / logoImage.width, maxSigHeight / logoImage.height);
+    const sigWidth = logoImage.width * sigScale;
+    const sigHeight = logoImage.height * sigScale;
+    page.drawImage(logoImage, {
+      x: leftX + (lineWidth - sigWidth) / 2,
+      y: signatureY + 2,
+      width: sigWidth,
+      height: sigHeight,
+    });
+  } catch (err) {
+    // Logo is optional; continue without it.
+  }
+
   try {
     const signBytes = await getBytesFromStorage(
       `uploads/sign-${encodeURIComponent(job.do_number)}.png`
     );
     const signImage = await pdfDoc.embedPng(signBytes);
-    const signWidth = 140;
-    const signScale = signWidth / signImage.width;
+    const maxSignWidth = 140;
+    const maxSignHeight = 40;
+    const signScale = Math.min(maxSignWidth / signImage.width, maxSignHeight / signImage.height);
+    const signWidth = signImage.width * signScale;
     const signHeight = signImage.height * signScale;
     page.drawImage(signImage, {
-      x: rightX + 10,
-      y: signatureY + 10,
+      x: rightX + (lineWidth - signWidth) / 2,
+      y: signatureY + 2,
       width: signWidth,
       height: signHeight,
     });

@@ -25,7 +25,7 @@
                     <h1 mat-dialog-title class="text-center">Delivery Address</h1>
                     <mat-divider></mat-divider>
                     <div mat-dialog-content>
-                        <p class="text">{{element.deliveryAddress}}</p>
+                        <p class="text">{{element.deliveryAddress || element.customer_deliveryAddress}}</p>
                     </div>
                     <div mat-dialog-actions class="btn">
                         <button mat-button data-toggle="tooltip" title="Locatin" class="mapbutton"

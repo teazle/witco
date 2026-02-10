@@ -85,6 +85,16 @@
                                         <input matInput formControlName="address" placeholder="Address" type="text"
                                             autocomplete="off">
                                     </mat-form-field>
+                                    <mat-form-field class="example-full-width">
+                                        <input matInput formControlName="deliveryAddress" placeholder="Delivery Address"
+                                            autocomplete="off">
+                                    </mat-form-field>
+                                    <div
+                                        *ngIf="customerForm.get('deliveryAddress').invalid && (customerForm.get('deliveryAddress').dirty || customerForm.get('deliveryAddress').touched)">
+                                        <mat-error *ngIf="customerForm.get('deliveryAddress').hasError('required')">
+                                            Delivery Address is Required!
+                                        </mat-error>
+                                    </div>
                                     <mat-form-field class="example-full-width" *ngIf="false">
                                         <input matInput formControlName="userRole" placeholder="userRole" type="text"
                                             autocomplete="off">
@@ -120,25 +130,11 @@
                         </mat-error>
                     </div>
                     <mat-form-field class="example-full-width">
-                        <input matInput formControlName="deliveryAddress" placeholder="Delivery Address"
-                            autocomplete="off">
-                    </mat-form-field>
-                    <div
-                        *ngIf="goodsForm.get('deliveryAddress').invalid && (goodsForm.get('deliveryAddress').dirty || goodsForm.get('deliveryAddress').touched)">
-                        <mat-error *ngIf="goodsForm.get('deliveryAddress').hasError('required')">
-                            Delivery Address is Required!
-                        </mat-error>
-                    </div>
-                    <mat-form-field class="example-full-width">
                         <input matInput formControlName="zipcode" placeholder="Zip Code"
                             autocomplete="off">
                     </mat-form-field>
                     <div
                     *ngIf="goodsForm.get('zipcode').invalid && (goodsForm.get('zipcode').dirty || goodsForm.get('zipcode').touched)">
-
-                    <mat-error *ngIf="goodsForm.get('zipcode').hasError('required')">
-                        Zipcode is Required!
-                    </mat-error>
 
                     <mat-error *ngIf="goodsForm.get('zipcode').hasError('pattern')">
                         zipcode only contain 6 digit!

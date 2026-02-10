@@ -33,8 +33,7 @@ export class JobComponent implements OnInit,AfterViewInit {
   goodsForm = this.fb.group({
     inv_temp: [''],
     invoiceNumber: ['',Validators.required],
-    deliveryAddress: ['',Validators.required],
-    zipcode: [null, Validators.compose([Validators.required,Validators.pattern(/^[0-9]{6}$/)])],
+    zipcode: [null, Validators.pattern(/^[0-9]{6}$/)],
     goods: this.fb.array([])
   });
   previousValues: { [key: string]: any } = {};
@@ -60,6 +59,7 @@ export class JobComponent implements OnInit,AfterViewInit {
       code:["+65",Validators.required],
       phone: [null, Validators.compose([Validators.required,Validators.pattern(/^(\+65)?\d{8}$/)])],
       address: [''],
+      deliveryAddress: ['', Validators.required],
       userRole: ['customer']
     });
 
@@ -124,15 +124,16 @@ export class JobComponent implements OnInit,AfterViewInit {
   onSubmit() {
     this.authService.setLoader(true);
     let value = this.customerForm.value;
-    let job={
-      firstName:value.firstName,
-      lastName:value.lastName ,
-      companyName:value.companyName,
-      email:value.email,
-      phone:value.code+value.phone ,
-      address:value.address,
-      userRole:'customer'
-    }
+      let job={
+        firstName:value.firstName,
+        lastName:value.lastName ,
+        companyName:value.companyName,
+        email:value.email,
+        phone:value.code+value.phone ,
+        address:value.address,
+        deliveryAddress: value.deliveryAddress,
+        userRole:'customer'
+      }
     if (!this.formId && !this.searchCustomer) {
       this.authService.postData('customer/add', job).subscribe(response => {
         if (response) {
@@ -159,6 +160,7 @@ export class JobComponent implements OnInit,AfterViewInit {
         customer_email:value.email,
         customer_phone:value.code+value.phone ,
         customer_address:value.address,
+        customer_deliveryAddress: value.deliveryAddress,
         userRole:'customer'
       }
       this.authService.patchData(`jobs/edit/${this.job_id}`, job).subscribe((res:any) => {
@@ -202,7 +204,8 @@ export class JobComponent implements OnInit,AfterViewInit {
           customer_companyName:value.companyName,
           customer_email:value.email,
           customer_phone:value.code+value.phone,
-          customer_address:value.address, 
+          customer_address:value.address,
+          customer_deliveryAddress: value.deliveryAddress,
           goods_id: this.goods_id
         }
         this.authService.postData('jobs/add', data).subscribe((res: any) => {
@@ -262,7 +265,6 @@ export class JobComponent implements OnInit,AfterViewInit {
           this.goodsForm.patchValue({
             inv_temp: good.inv_temp,
             invoiceNumber: good.invoiceNumber,
-            deliveryAddress: good.deliveryAddress,
             zipcode:good.zipcode,
             goods: this.setGood(good.goods)
           })
@@ -278,6 +280,7 @@ export class JobComponent implements OnInit,AfterViewInit {
         code:res.data.job.customer_phone.slice(0,3),
         phone:res.data.job.customer_phone.slice(3,),
         address: res.data.job.customer_address,
+        deliveryAddress: res.data.job.customer_deliveryAddress,
         userRole: 'customer'
       }
     },(err)=>{
@@ -321,6 +324,7 @@ export class JobComponent implements OnInit,AfterViewInit {
       code:data.phone.slice(0,3),
       phone: data.phone.slice(3,),
       address: data.address,
+      deliveryAddress: data.deliveryAddress,
       userRole: data.userRole
     });
     this.customer_id= data._id;

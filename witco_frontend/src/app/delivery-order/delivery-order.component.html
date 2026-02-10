@@ -75,7 +75,7 @@
             <!-- Symbol Column -->
             <ng-container matColumnDef="deliveryAddress" class="r-30">
                 <th mat-header-cell *matHeaderCellDef > Delivery Address </th>
-                <td mat-cell *matCellDef="let element" > {{element.deliveryAddress}} </td>
+                <td mat-cell *matCellDef="let element" > {{element.deliveryAddress || element.customer_deliveryAddress}} </td>
             </ng-container>
 
             <!-- Symbol Column -->

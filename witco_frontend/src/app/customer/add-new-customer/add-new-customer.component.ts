@@ -36,6 +36,7 @@ export class AddNewCustomerComponent implements OnInit {
         code:["+65",Validators.required],
         phone: [null, Validators.compose([Validators.required,Validators.pattern(/^(\+65)?\d{8}$/)])],
         address: [''],
+        deliveryAddress: [''],
         userRole: ['customer']
       });
 
@@ -60,14 +61,15 @@ export class AddNewCustomerComponent implements OnInit {
   onSubmit() {
     let value = this.customerForm.value;
     this.authService.setLoader(true);
-    let data= {
-      firstName: value.firstName,
-      lastName: value.lastName,
-      companyName:value.companyName, 
-      email: value.email,
-      phone: value.code+ value.phone,
-      address:value.address,
-      userRole:value.userRole
+      let data= {
+        firstName: value.firstName,
+        lastName: value.lastName,
+        companyName:value.companyName, 
+        email: value.email,
+        phone: value.code+ value.phone,
+        address:value.address,
+        deliveryAddress: value.deliveryAddress,
+        userRole:value.userRole
     }
     if (!this.formId) {
         this.authService.postData('customer/add', data).subscribe(response => {
@@ -101,16 +103,17 @@ export class AddNewCustomerComponent implements OnInit {
     this.authService.setLoader(true)
     this.authService.getData(`customer/get/${id}`).subscribe(res => {
       let data= res.data;
-      this.customerForm.patchValue({
-        firstName: data.firstName,
-        lastName: data.lastName,
-        companyName:data.companyName, 
-        email: data.email,
-        code:data.phone.slice(0,3),
-        phone: data.phone.slice(3,),
-        address:data.address,
-        userRole:data.userRole
-      })
+        this.customerForm.patchValue({
+          firstName: data.firstName,
+          lastName: data.lastName,
+          companyName:data.companyName, 
+          email: data.email,
+          code:data.phone.slice(0,3),
+          phone: data.phone.slice(3,),
+          address:data.address,
+          deliveryAddress: data.deliveryAddress,
+          userRole:data.userRole
+        })
       this.authService.setLoader(false)
     })
   }

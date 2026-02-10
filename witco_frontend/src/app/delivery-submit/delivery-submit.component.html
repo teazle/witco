@@ -12,7 +12,7 @@
             <mat-divider></mat-divider>
             <mat-list-item> DO Number  : {{goodsDetails?.invoiceNumber}}</mat-list-item>
             <mat-divider></mat-divider>
-            <mat-list-item class="address"> Address : {{goodsDetails?.deliveryAddress}}</mat-list-item>
+            <mat-list-item class="address"> Address : {{jobDetails?.customer_deliveryAddress || goodsDetails?.deliveryAddress}}</mat-list-item>
             <mat-divider></mat-divider>
         </mat-list>
     </mat-card-content>

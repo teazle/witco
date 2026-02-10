@@ -48,7 +48,7 @@ export class DeliveryOrderComponent implements OnInit {
   /** Build and run the jobs API call with current page, pageSize, and optional date range. */
   loadJobs() {
     this.authService.setLoader(true);
-    const qp: string[] = [`page=${this.page + 1}`, `pagesize=${this.pageSize}`];
+    const qp: string[] = [`page=${this.page + 1}`, `pagesize=${this.pageSize}`, `status=Created`];
     if (this.fromDate && this.toDate) {
       qp.push(`fromDate=${moment(this.fromDate).format('YYYY-MM-DD')}`);
       qp.push(`toDate=${moment(this.toDate).format('YYYY-MM-DD')}`);
