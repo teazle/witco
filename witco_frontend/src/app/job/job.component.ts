@@ -16,6 +16,7 @@ import { event, map } from 'jquery';
 export class JobComponent implements OnInit,AfterViewInit {
 
   @ViewChild('search',{static:false}) searchInput:ElementRef
+  @ViewChild('docInput', { static: false }) docInput: ElementRef;
   filteredItems:any[] =[];
   object = Object
   customerForm: FormGroup;
@@ -30,6 +31,18 @@ export class JobComponent implements OnInit,AfterViewInit {
   searchTerm: string = '';
   searchformdisplay:boolean=true;
   jobStatus:any
+  documentFile: File | null = null;
+  parseWarnings: string[] = [];
+  isParsing = false;
+  isDragOver = false;
+  parsedDraft: any = null;
+  draftOptions = {
+    customer: true,
+    contact: true,
+    delivery: true,
+    invoice: true,
+    goods: true
+  };
   goodsForm = this.fb.group({
     inv_temp: [''],
     invoiceNumber: ['',Validators.required],
@@ -120,6 +133,128 @@ export class JobComponent implements OnInit,AfterViewInit {
       // amount: ['']
     })
     this.goods.push(good);
+  }
+
+  onDocumentSelected(event: any) {
+    const file = event.target && event.target.files ? event.target.files[0] : null;
+    if (!file) return;
+    this.handleDocument(file);
+  }
+
+  triggerBrowse() {
+    if (this.docInput && this.docInput.nativeElement) {
+      this.docInput.nativeElement.click();
+    }
+  }
+
+  onDragOver(event: DragEvent) {
+    event.preventDefault();
+    this.isDragOver = true;
+  }
+
+  onDragLeave(event: DragEvent) {
+    event.preventDefault();
+    this.isDragOver = false;
+  }
+
+  onDrop(event: DragEvent) {
+    event.preventDefault();
+    this.isDragOver = false;
+    const file = event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0];
+    if (!file) return;
+    this.handleDocument(file);
+  }
+
+  handleDocument(file: File) {
+    this.documentFile = file;
+    this.parseDocument(file);
+    if (this.docInput && this.docInput.nativeElement) {
+      this.docInput.nativeElement.value = '';
+    }
+  }
+
+  parseDocument(file: File) {
+    const formData = new FormData();
+    formData.append('document', file);
+    this.isParsing = true;
+    this.authService.postData('jobs/parse-document', formData).subscribe((res: any) => {
+      const data = res.data || {};
+      this.parsedDraft = data;
+      this.parseWarnings = data.warnings || [];
+      this.isParsing = false;
+      this.toastService.success('Document parsed. Review the draft before applying.');
+    }, error => {
+      this.isParsing = false;
+      this.toastService.error(error);
+    });
+  }
+
+  applyParsedData(data: any, options?: any) {
+    const selected = options || this.draftOptions;
+    const name = (data.customerName || '').trim();
+    let firstName = '';
+    let lastName = '';
+    if (name) {
+      const parts = name.split(/\s+/);
+      firstName = parts.shift();
+      lastName = parts.join(' ');
+    }
+
+    const phoneDigits = (data.customerPhone || '').replace(/\D/g, '');
+    const phone = phoneDigits ? phoneDigits.slice(-8) : '';
+
+    if (selected.customer) {
+      this.customerForm.patchValue({
+        firstName: firstName || this.customerForm.get('firstName').value,
+        lastName: lastName || this.customerForm.get('lastName').value,
+        companyName: data.customerCompany || this.customerForm.get('companyName').value,
+      });
+    }
+
+    if (selected.contact) {
+      this.customerForm.patchValue({
+        email: data.customerEmail || this.customerForm.get('email').value,
+        phone: phone || this.customerForm.get('phone').value,
+      });
+    }
+
+    if (selected.delivery) {
+      this.customerForm.patchValue({
+        deliveryAddress: data.deliveryAddress || this.customerForm.get('deliveryAddress').value,
+      });
+    }
+
+    if (selected.invoice) {
+      this.goodsForm.patchValue({
+        invoiceNumber: data.invoiceNumber || this.goodsForm.get('invoiceNumber').value,
+        inv_temp: data.poNumber || this.goodsForm.get('inv_temp').value,
+      });
+    }
+
+    if (selected.goods && Array.isArray(data.goods) && data.goods.length) {
+      while (this.goods.length) {
+        this.goods.removeAt(0);
+      }
+      data.goods.forEach((item) => {
+        const good = this.fb.group({
+          goodsName: [item.goodsName || '', Validators.required],
+          quantity: [item.quantity || '', Validators.compose([Validators.required, Validators.pattern("^[0-9]*$")])],
+        });
+        this.goods.push(good);
+      });
+    }
+  }
+
+  applyDraft() {
+    if (!this.parsedDraft) return;
+    this.applyParsedData(this.parsedDraft, this.draftOptions);
+    this.parsedDraft = null;
+    this.toastService.success('Draft applied.');
+  }
+
+  discardDraft() {
+    this.parsedDraft = null;
+    this.toastService.warning('Draft discarded.');
   }
   onSubmit() {
     this.authService.setLoader(true);

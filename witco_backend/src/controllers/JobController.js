@@ -3,6 +3,8 @@ const AppError = require("../utils/AppError");
 const Job = require("../models/jobModel");
 const Goods = require("../models/goodsModel");
 const User = require("../models/userModel");
+const DispatchPlan = require("../models/dispatchPlanModel");
+const GeocodeCache = require("../models/geocodeCacheModel");
 const accountSid = process.env.TWILIO_ACCOUNT_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN;
 const Email = require("../utils/email");
@@ -15,6 +17,325 @@ const { blobPut, isBlobEnabled } = require("../utils/blob");
 const date = require("date-and-time");
 const s3 = require("../utils/awsconfig");
 const get_do = require("./CounterController");
+const mongoose = require("mongoose");
+const multer = require("multer");
+const pdfParse = require("pdf-parse");
+const { createWorker } = require("tesseract.js");
+const fetch = require("node-fetch");
+
+const ORS_API_KEY = process.env.ORS_API_KEY;
+const ORS_BASE_URL =
+  process.env.ORS_BASE_URL || "https://api.openrouteservice.org";
+const ORS_DEFAULT_DEPOT_ADDRESS = process.env.ORS_DEFAULT_DEPOT_ADDRESS || "";
+const geocodeCache = new Map();
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 15 * 1024 * 1024 },
+});
+
+const ZIP_SG = /\b\d{6}\b/;
+const ZIP_US = /\b\d{5}\b/;
+const NON_EMPTY_LINE = /\S+/;
+
+function extractZip(value) {
+  if (!value) return "";
+  const text = String(value);
+  const matchSg = text.match(ZIP_SG);
+  if (matchSg) return matchSg[0];
+  const matchUs = text.match(ZIP_US);
+  return matchUs ? matchUs[0] : "";
+}
+
+function normalizeText(text) {
+  return String(text || "")
+    .replace(/\r/g, "\n")
+    .replace(/\n{2,}/g, "\n")
+    .trim();
+}
+
+function extractBlockAfter(label, lines, maxLines = 4) {
+  const index = lines.findIndex((line) =>
+    line.toLowerCase().includes(label.toLowerCase())
+  );
+  if (index === -1) return [];
+  const block = [];
+  for (let i = index + 1; i < lines.length && block.length < maxLines; i += 1) {
+    const line = lines[i].trim();
+    if (!line) break;
+    block.push(line);
+  }
+  return block;
+}
+
+function parseGoodsLines(lines) {
+  const goods = [];
+  lines.forEach((line) => {
+    const cleaned = line.replace(/\s{2,}/g, " ").trim();
+    if (!cleaned || cleaned.length < 3) return;
+    const qtyFirst = cleaned.match(/^(\d+)\s*(?:x|pcs|qty)?\s+(.+)$/i);
+    if (qtyFirst) {
+      const quantity = Number(qtyFirst[1]);
+      const goodsName = qtyFirst[2].trim();
+      if (quantity > 0 && goodsName.length > 2) {
+        goods.push({ goodsName, quantity });
+      }
+      return;
+    }
+    const qtyLast = cleaned.match(/^(.+?)\s+(\d+)\s*(?:x|pcs|qty)?$/i);
+    if (qtyLast) {
+      const quantity = Number(qtyLast[2]);
+      const goodsName = qtyLast[1].trim();
+      if (quantity > 0 && goodsName.length > 2) {
+        goods.push({ goodsName, quantity });
+      }
+    }
+  });
+  return goods;
+}
+
+function parseDocumentText(rawText) {
+  const text = normalizeText(rawText);
+  const lines = text.split("\n").map((line) => line.trim());
+  const nonEmptyLines = lines.filter((line) => NON_EMPTY_LINE.test(line));
+
+  const invoicePatterns = [
+    /invoice\s*(?:no\.?|number|#)?\s*[:\-]?\s*([A-Z0-9\-]+)/i,
+    /\bdo\s*(?:no\.?|number|#)?\s*[:\-]?\s*([A-Z0-9\-]+)/i,
+  ];
+  const poPatterns = [
+    /\bpo\s*(?:no\.?|number|#)?\s*[:\-]?\s*([A-Z0-9\-]+)/i,
+    /purchase\s*order\s*(?:no\.?|number|#)?\s*[:\-]?\s*([A-Z0-9\-]+)/i,
+  ];
+
+  let invoiceNumber = "";
+  for (const pattern of invoicePatterns) {
+    const match = text.match(pattern);
+    if (match && match[1]) {
+      invoiceNumber = match[1].trim();
+      break;
+    }
+  }
+
+  let poNumber = "";
+  for (const pattern of poPatterns) {
+    const match = text.match(pattern);
+    if (match && match[1]) {
+      poNumber = match[1].trim();
+      break;
+    }
+  }
+
+  const deliveryCandidates = [
+    extractBlockAfter("Delivery Address", nonEmptyLines),
+    extractBlockAfter("Ship To", nonEmptyLines),
+    extractBlockAfter("Deliver To", nonEmptyLines),
+  ];
+  const deliveryBlock = deliveryCandidates.find((block) => block.length) || [];
+  const deliveryAddress = deliveryBlock.length ? deliveryBlock.join(", ") : "";
+
+  const billToBlock = extractBlockAfter("Bill To", nonEmptyLines);
+  const customerLine = billToBlock[0] || "";
+  const companyLine = billToBlock[1] || "";
+
+  const emailMatch = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+  const phoneMatch = text.match(/(\+?\d[\d\s-]{6,})/);
+
+  const goodsStartIndex = nonEmptyLines.findIndex((line) =>
+    /description|item|product/i.test(line)
+  );
+  const goodsLines =
+    goodsStartIndex >= 0
+      ? nonEmptyLines.slice(goodsStartIndex + 1, goodsStartIndex + 20)
+      : nonEmptyLines.slice(0, 20);
+  const goods = parseGoodsLines(goodsLines);
+
+  const warnings = [];
+  if (!invoiceNumber) warnings.push("invoiceNumber_not_found");
+  if (!deliveryAddress) warnings.push("deliveryAddress_not_found");
+  if (!goods.length) warnings.push("goods_not_found");
+
+  return {
+    invoiceNumber,
+    poNumber,
+    deliveryAddress,
+    customerName: customerLine,
+    customerCompany: companyLine,
+    customerEmail: emailMatch ? emailMatch[0] : "",
+    customerPhone: phoneMatch ? phoneMatch[0].trim() : "",
+    goods,
+    warnings,
+  };
+}
+
+function parseDriverCoord(loc) {
+  if (!Array.isArray(loc) || loc.length < 2) return null;
+  const lat = Number(loc[0]);
+  const lon = Number(loc[1]);
+  if (Number.isNaN(lat) || Number.isNaN(lon)) return null;
+  return [lon, lat];
+}
+
+function haversineKm(a, b) {
+  if (!a || !b) return Number.MAX_VALUE;
+  const toRad = (value) => (value * Math.PI) / 180;
+  const [lon1, lat1] = a;
+  const [lon2, lat2] = b;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const aa =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) *
+      Math.cos(toRad(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(aa), Math.sqrt(1 - aa));
+  return 6371 * c;
+}
+
+async function geocodeAddress(address) {
+  if (!address || !ORS_API_KEY) return null;
+  const key = String(address).trim().toLowerCase();
+  if (!key) return null;
+  if (geocodeCache.has(key)) return geocodeCache.get(key);
+  const cached = await GeocodeCache.findOne({ address: key }).lean();
+  if (cached && Array.isArray(cached.coords) && cached.coords.length === 2) {
+    await GeocodeCache.updateOne(
+      { address: key },
+      { $set: { lastUsedAt: new Date() } }
+    );
+    geocodeCache.set(key, cached.coords);
+    return cached.coords;
+  }
+  try {
+    const url = `${ORS_BASE_URL}/geocode/search?api_key=${ORS_API_KEY}&text=${encodeURIComponent(
+      address
+    )}`;
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    const data = await response.json();
+    const coord = data?.features?.[0]?.geometry?.coordinates || null;
+    if (Array.isArray(coord) && coord.length === 2) {
+      geocodeCache.set(key, coord);
+      await GeocodeCache.findOneAndUpdate(
+        { address: key },
+        {
+          $set: {
+            address: key,
+            coords: coord,
+            provider: "ors",
+            lastUsedAt: new Date(),
+          },
+        },
+        { upsert: true, new: true }
+      );
+      return coord;
+    }
+  } catch (error) {
+    return null;
+  }
+  return null;
+}
+
+async function getRouteSegments(coordinates) {
+  if (!ORS_API_KEY || !Array.isArray(coordinates) || coordinates.length < 2) {
+    return null;
+  }
+  try {
+    const response = await fetch(`${ORS_BASE_URL}/v2/directions/driving-car`, {
+      method: "POST",
+      headers: {
+        Authorization: ORS_API_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        coordinates,
+        instructions: false,
+      }),
+    });
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data?.features?.[0]?.properties?.segments || null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function orderByNearest(startCoord, jobs) {
+  if (!startCoord) return buildRouteOrder(jobs);
+  const remaining = [...jobs];
+  const ordered = [];
+  let current = startCoord;
+  while (remaining.length) {
+    let bestIndex = 0;
+    let bestDistance = Number.MAX_VALUE;
+    remaining.forEach((job, idx) => {
+      const dist = job.coord ? haversineKm(current, job.coord) : Number.MAX_VALUE;
+      if (dist < bestDistance) {
+        bestDistance = dist;
+        bestIndex = idx;
+      }
+    });
+    const nextJob = remaining.splice(bestIndex, 1)[0];
+    ordered.push(nextJob);
+    if (nextJob && nextJob.coord) current = nextJob.coord;
+  }
+  return ordered;
+}
+
+function buildRouteOrder(jobs) {
+  const sortable = jobs.map((job) => {
+    const zip = extractZip(
+      job.zipcode || job.customer_deliveryAddress || job.customer_address
+    );
+    const numeric = zip ? Number(zip) : NaN;
+    return {
+      ...job,
+      zipKey: zip,
+      zipNumeric: Number.isNaN(numeric) ? null : numeric,
+    };
+  });
+  sortable.sort((a, b) => {
+    if (a.zipNumeric != null && b.zipNumeric != null) return a.zipNumeric - b.zipNumeric;
+    if (a.zipNumeric != null) return -1;
+    if (b.zipNumeric != null) return 1;
+    return String(a.customer_deliveryAddress || a.customer_address || "").localeCompare(
+      String(b.customer_deliveryAddress || b.customer_address || "")
+    );
+  });
+  return sortable;
+}
+
+function assignJobsToDrivers(jobs, drivers) {
+  const driverBuckets = drivers.map((driver) => ({
+    driver,
+    jobs: [],
+    count: 0,
+  }));
+  if (!driverBuckets.length) return [];
+
+  const grouped = jobs.reduce((acc, job) => {
+    const zipKey =
+      extractZip(job.zipcode || job.customer_deliveryAddress || job.customer_address) ||
+      "unknown";
+    if (!acc[zipKey]) acc[zipKey] = [];
+    acc[zipKey].push(job);
+    return acc;
+  }, {});
+
+  const groups = Object.keys(grouped)
+    .map((zipKey) => ({ zipKey, jobs: grouped[zipKey] }))
+    .sort((a, b) => b.jobs.length - a.jobs.length);
+
+  groups.forEach((group) => {
+    driverBuckets.sort((a, b) => a.count - b.count);
+    const bucket = driverBuckets[0];
+    bucket.jobs.push(...group.jobs);
+    bucket.count += group.jobs.length;
+  });
+
+  return driverBuckets;
+}
 exports.addJob = catchAsync(async (req, res, next) => { 
     const {customer_firstName,
       customer_companyName,
@@ -581,6 +902,360 @@ exports.invoice = catchAsync(async (req,res,next)=>{
   res.status(200).send({
     status: "success",
     message: "Invoice generated",
+  });
+});
+
+exports.suggestDispatch = catchAsync(async (req, res, next) => {
+  const { jobIds, driverIds, perStopMinutes, startTime, depotAddress, saveDraft } =
+    req.body || {};
+  const match = { status: "Created" };
+
+  if (Array.isArray(jobIds) && jobIds.length) {
+    const ids = jobIds
+      .filter((id) => typeof id === "string" && id.length === 24)
+      .map((id) => new mongoose.Types.ObjectId(id));
+    if (ids.length) match._id = { $in: ids };
+  }
+
+  const jobs = await Job.aggregate([
+    { $match: match },
+    {
+      $lookup: {
+        from: "goods",
+        localField: "goods_id",
+        foreignField: "_id",
+        as: "goods",
+      },
+    },
+    {
+      $addFields: {
+        goods: { $arrayElemAt: ["$goods", 0] },
+      },
+    },
+    {
+      $project: {
+        customer_deliveryAddress: 1,
+        customer_address: 1,
+        do_number: 1,
+        createdAt: 1,
+        goods_id: 1,
+        zipcode: "$goods.zipcode",
+        invoiceNumber: "$goods.invoiceNumber",
+        inv_temp: "$goods.inv_temp",
+      },
+    },
+  ]);
+
+  const driverQuery = { userRole: "driver" };
+  if (Array.isArray(driverIds) && driverIds.length) {
+    const ids = driverIds
+      .filter((id) => typeof id === "string" && id.length === 24)
+      .map((id) => new mongoose.Types.ObjectId(id));
+    if (ids.length) driverQuery._id = { $in: ids };
+  }
+  const drivers = await User.find(driverQuery).lean();
+
+  const perStop = Number(perStopMinutes) > 0 ? Number(perStopMinutes) : 15;
+  const baseTime = startTime ? new Date(startTime) : new Date();
+  const depotText = depotAddress || ORS_DEFAULT_DEPOT_ADDRESS || "";
+  const depotCoord = depotText ? await geocodeAddress(depotText) : null;
+
+  const driversWithCoords = drivers.map((driver) => ({
+    ...driver,
+    startCoord: parseDriverCoord(driver.loc) || depotCoord,
+  }));
+
+  const jobsWithCoords = await Promise.all(
+    jobs.map(async (job) => {
+      const address =
+        job.customer_deliveryAddress || job.customer_address || "";
+      const coord = address ? await geocodeAddress(address) : null;
+      return {
+        ...job,
+        address,
+        coord,
+      };
+    })
+  );
+
+  const hasGeo =
+    ORS_API_KEY &&
+    driversWithCoords.some((driver) => driver.startCoord) &&
+    jobsWithCoords.some((job) => job.coord);
+
+  let strategy = "zipcode-balance";
+  let routing = "heuristic";
+  let buckets = [];
+
+  if (hasGeo) {
+    strategy = "geo-balance";
+    buckets = driversWithCoords.map((driver) => ({
+      driver,
+      jobs: [],
+      count: 0,
+    }));
+
+    jobsWithCoords.forEach((job) => {
+      let bestIndex = 0;
+      let bestScore = Number.MAX_VALUE;
+      buckets.forEach((bucket, index) => {
+        const distance = job.coord && bucket.driver.startCoord
+          ? haversineKm(bucket.driver.startCoord, job.coord)
+          : Number.MAX_VALUE;
+        const score = distance + bucket.count * 2;
+        if (score < bestScore) {
+          bestScore = score;
+          bestIndex = index;
+        }
+      });
+      buckets[bestIndex].jobs.push(job);
+      buckets[bestIndex].count += 1;
+    });
+  } else {
+    buckets = assignJobsToDrivers(jobsWithCoords, driversWithCoords);
+  }
+
+  const assignments = [];
+
+  for (const bucket of buckets) {
+    const ordered = hasGeo
+      ? orderByNearest(bucket.driver.startCoord, bucket.jobs)
+      : buildRouteOrder(bucket.jobs);
+
+    let jobsWithEta = [];
+    if (
+      hasGeo &&
+      bucket.driver.startCoord &&
+      ordered.length &&
+      ordered.every((job) => job.coord)
+    ) {
+      const coordinates = [
+        bucket.driver.startCoord,
+        ...ordered.map((job) => job.coord),
+      ];
+      const segments = await getRouteSegments(coordinates);
+      if (segments && segments.length) {
+        routing = "ors-directions";
+        let elapsed = 0;
+        jobsWithEta = ordered.map((job, index) => {
+          const segment = segments[index];
+          if (segment && segment.duration) elapsed += segment.duration;
+          elapsed += perStop * 60;
+          const etaTime = new Date(baseTime.getTime() + elapsed * 1000);
+          return {
+            job_id: job._id,
+            do_number: job.do_number,
+            invoiceNumber: job.invoiceNumber || job.inv_temp || "",
+            deliveryAddress:
+              job.customer_deliveryAddress || job.customer_address || "",
+            zipcode: job.zipcode || "",
+            sequence: index + 1,
+            etaMinutes: Math.round(elapsed / 60),
+            etaTime: etaTime.toISOString(),
+          };
+        });
+      }
+    }
+
+    if (!jobsWithEta.length) {
+      jobsWithEta = ordered.map((job, index) => {
+        const etaMinutes = perStop * (index + 1);
+        const etaTime = new Date(baseTime.getTime() + etaMinutes * 60 * 1000);
+        return {
+          job_id: job._id,
+          do_number: job.do_number,
+          invoiceNumber: job.invoiceNumber || job.inv_temp || "",
+          deliveryAddress:
+            job.customer_deliveryAddress || job.customer_address || "",
+          zipcode: job.zipcode || "",
+          sequence: index + 1,
+          etaMinutes,
+          etaTime: etaTime.toISOString(),
+        };
+      });
+    }
+
+    assignments.push({
+      driver_id: bucket.driver._id,
+      driver_name: `${bucket.driver.firstName || ""} ${
+        bucket.driver.lastName || ""
+      }`.trim(),
+      driver_email: bucket.driver.email || "",
+      jobs: jobsWithEta,
+    });
+  }
+
+  let planId = null;
+  if (saveDraft !== false) {
+    const plan = await DispatchPlan.create({
+      createdBy: req.user ? req.user._id : undefined,
+      status: "draft",
+      assignments: assignments.map((assignment) => ({
+        driver_id: assignment.driver_id,
+        driver_email: assignment.driver_email,
+        jobs: (assignment.jobs || []).map((job) => ({
+          job_id: job.job_id,
+          sequence: job.sequence,
+        })),
+      })),
+    });
+    planId = plan._id;
+  }
+
+  res.status(200).json({
+    status: "success",
+    data: {
+      strategy,
+      assumptions: {
+        startPoint: depotText || "driver-gps",
+        routing,
+        etaMinutesPerStop: perStop,
+      },
+      totalJobs: jobs.length,
+      totalDrivers: drivers.length,
+      assignments,
+      planId,
+    },
+  });
+});
+
+exports.parseDocument = [
+  upload.single("document"),
+  catchAsync(async (req, res, next) => {
+    if (!req.file) {
+      return next(new AppError("Please upload a document", 400));
+    }
+
+    const name = req.file.originalname || "";
+    const mime = req.file.mimetype || "";
+    const isPdf = mime.includes("pdf") || name.toLowerCase().endsWith(".pdf");
+    const isImage =
+      mime.startsWith("image/") ||
+      /\.(png|jpe?g|bmp|tiff)$/i.test(name.toLowerCase());
+
+    if (!isPdf && !isImage) {
+      return next(
+        new AppError("Unsupported file type. Use PDF or image.", 400)
+      );
+    }
+
+    let text = "";
+    if (isPdf) {
+      const parsed = await pdfParse(req.file.buffer);
+      text = parsed.text || "";
+    } else if (isImage) {
+      const worker = await createWorker({ logger: () => {} });
+      try {
+        await worker.load();
+        await worker.loadLanguage("eng");
+        await worker.initialize("eng");
+        const result = await worker.recognize(req.file.buffer);
+        text = (result && result.data && result.data.text) || "";
+      } finally {
+        await worker.terminate();
+      }
+    }
+
+    const parsed = parseDocumentText(text);
+    res.status(200).json({
+      status: "success",
+      data: parsed,
+    });
+  }),
+];
+
+exports.applyDispatchPlan = catchAsync(async (req, res, next) => {
+  if (!req.params.id || req.params.id.length !== 24) {
+    return next(new AppError("Please Provide Valid Plan Id", 400));
+  }
+  const plan = await DispatchPlan.findById(req.params.id);
+  if (!plan) {
+    throw new AppError("Dispatch plan not found", 404);
+  }
+
+  for (const assignment of plan.assignments || []) {
+    const driver = await User.findById(assignment.driver_id);
+    if (!driver) continue;
+    const jobIds = (assignment.jobs || []).map((job) => job.job_id);
+    if (!jobIds.length) continue;
+
+    await Job.updateMany(
+      { _id: { $in: jobIds } },
+      {
+        $set: {
+          driver_firstName: driver.firstName,
+          driver_lastName: driver.lastName,
+          driver_vehicleNumber: driver.vehicleNumber,
+          driver_licenceNumber: driver.licenceNumber,
+          driver_governmentIDs: driver.governmentIDs,
+          driver_email: driver.email,
+          driver_phone: driver.phone,
+          status: "Delivering",
+        },
+      }
+    );
+
+    if (client && process.env.TWILIO_NUMBER && driver.phone) {
+      client.messages
+        .create({
+          body: `Hi ${driver.firstName}, new delivery orders have been assigned to you. Check your app for details.`,
+          from: process.env.TWILIO_NUMBER,
+          to: driver.phone,
+        })
+        .then((message) => console.log("Twilio SMS sent:", message.sid))
+        .catch((err) => {
+          console.warn("Twilio SMS failed:", err.message || err.code);
+        });
+    }
+  }
+
+  plan.status = "applied";
+  plan.appliedAt = new Date();
+  await plan.save();
+
+  res.status(200).json({
+    status: "success",
+    message: "Dispatch plan applied",
+  });
+});
+
+exports.undoDispatchPlan = catchAsync(async (req, res, next) => {
+  if (!req.params.id || req.params.id.length !== 24) {
+    return next(new AppError("Please Provide Valid Plan Id", 400));
+  }
+  const plan = await DispatchPlan.findById(req.params.id);
+  if (!plan) {
+    throw new AppError("Dispatch plan not found", 404);
+  }
+
+  const jobIds = (plan.assignments || []).flatMap((assignment) =>
+    (assignment.jobs || []).map((job) => job.job_id)
+  );
+  if (jobIds.length) {
+    await Job.updateMany(
+      { _id: { $in: jobIds } },
+      {
+        $set: {
+          status: "Created",
+          driver_firstName: "",
+          driver_lastName: "",
+          driver_vehicleNumber: "",
+          driver_licenceNumber: "",
+          driver_governmentIDs: "",
+          driver_email: "",
+          driver_phone: "",
+        },
+      }
+    );
+  }
+
+  plan.status = "undone";
+  plan.undoneAt = new Date();
+  await plan.save();
+
+  res.status(200).json({
+    status: "success",
+    message: "Dispatch plan undone",
   });
 });
 // function get_do_number(){

@@ -1,135 +1,171 @@
-table {
-  width: 100%;
-}
-h5{
-  margin-bottom: 0px;
+h5 {
+  margin-bottom: 0;
   margin-top: 20px;
   font-weight: bold;
   color: #41419e;
 }
-mat-paginator{
-display: flex;
-justify-content: end;
-align-items: stretch;
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
-mat-card-content{
-  padding: 0!important;
+
+.date-filter {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
 }
-mat-icon{
-  cursor: pointer;
+
+.search-btn {
+  background-color: #41419e;
 }
-.table{
-  width: 96.5%;
+
+mat-form-field {
+  width: 250px;
+  padding: 18px 0 0 18px;
+}
+
+::ng-deep .mat-form-field-appearance-outline .mat-form-field-wrapper {
+  margin: 0 !important;
+}
+
+@media only screen and (max-width: 1024px) {
+  mat-form-field {
+    width: 180px;
+  }
+}
+
+.board-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.board-toolbar .left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.board-toolbar .right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.board-toolbar .right mat-form-field {
+  width: 260px;
+}
+
+.board {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
   overflow-x: auto;
 }
-.header{
-display: flex;
-align-items: center;
-justify-content: space-between;
-}
-.add-job{
+
+.column {
+  min-width: 280px;
+  max-width: 320px;
+  background: #f6f6fb;
+  border-radius: 12px;
+  padding: 12px;
   display: flex;
-  padding: 10px 24px;
-  justify-content: space-between;
-  color: #41419e;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.column-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.column-header h6 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #222;
+}
+
+.column-header .count {
+  font-size: 12px;
+  color: #7a7a9c;
+}
+
+.driver-email {
+  font-size: 12px;
+  color: #50507a;
+}
+
+.column-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 120px;
+}
+
+.job-card {
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.job-top {
+  display: flex;
   align-items: center;
-}
-.add-job button{
-color: #FFFFFF;
-background-color: #41419e;
-}
-.submit{
-display: flex;
-justify-content: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: #6b6b84;
 }
 
-.submit-btn{
-background-color: #41419e;
-color: #FFFFFF;
-margin: 10px!important;
-padding: 2px 68px;
-}
-.search-btn{
-background-color: #41419e;
-}
-mat-form-field{
-.mat-form-field-wrapper{
-  margin: 0!important;
-}
-}
-::ng-deep  {
-
-.mat-form-field-appearance-outline .mat-form-field-wrapper{
-  margin: 0!important;
-}
-}
-.right-header-menu{
-display: flex;
-align-items: center;
-gap:10px;
-}
-.date-filter{
-display: flex;
-gap: 10px;
-align-items: baseline;
-}
-.filter-btn{
-margin-right: 5px;
+.job-seq {
+  font-weight: 600;
+  color: #41419e;
 }
 
-.date-filter{
-display: flex;
-align-items: baseline;
-
-}
-mat-form-field{
-width: 250px;
-padding: 18px 0 0 18px;
-.mat-form-field-infix{
-  padding:  8px 0 14px 0!important;
-}
-}
-@media only screen and (max-width: 1024px) {
-mat-form-field{
-    width: 180px;
-}
-}
-@media only screen and (max-width: 878px) {
-mat-form-field{
-    width: 180px;
-}
-}
-::ng-deep .mat-checkbox-checked.mat-accent .mat-checkbox-ripple .mat-ripple-element {
-opacity: 0.03 !important;
-background-color: #41419e !important;
+.job-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-::ng-deep .mat-checkbox-checked.mat-accent .mat-checkbox-background,.mat-checkbox-indeterminate.mat-accent .mat-checkbox-background {
-background-color: #41419e;
+.job-customer {
+  font-weight: 600;
+  color: #1e1e2e;
 }
 
-.no-data{
-text-align: center;
-padding: 20px 12px ;
+.job-company {
+  font-size: 12px;
+  color: #6b6b84;
 }
 
-.r-5{
-min-width: 50px;
+.job-address {
+  font-size: 12px;
+  color: #3b3b4f;
 }
-.r-10{
-min-width: 100px;
+
+.job-meta {
+  font-size: 12px;
+  color: #2f7d32;
 }
-.r-15{
-min-width: 150px;
+
+.job-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
 }
-.r-20{
-min-width: 210px;
-}
-.r-30{
-min-width: 310px;
-max-width: 324px;
-}
-.action{
-display: flex;
-align-items: center;
+
+.no-data {
+  text-align: center;
+  padding: 20px 12px;
 }

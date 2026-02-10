@@ -22,10 +22,13 @@
     "jsonwebtoken": "^9.0.0",
     "mongoose": "^7.1.1",
     "multer": "^1.4.5-lts.1",
+    "node-fetch": "^2.6.7",
     "nodemailer": "^6.9.3",
     "pdf-creator-node": "^2.3.5",
     "pdf-lib": "^1.17.1",
+    "pdf-parse": "^1.1.4",
     "pug": "^3.0.2",
+    "tesseract.js": "^5.1.1",
     "twilio": "^4.11.0",
     "validator": "^13.9.0"
   }

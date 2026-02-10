@@ -97,4 +97,18 @@ File: scss
     .icon-box{
         width: 50%;
     }
+
+    /* Prevent mat-form-field errors/hints from overlapping inputs on small screens */
+    .mat-form-field-wrapper{
+        padding-bottom: 0;
+    }
+    .mat-form-field-subscript-wrapper{
+        position: static;
+        margin-top: 4px;
+    }
+    .mat-form-field-subscript-wrapper .mat-error,
+    .mat-form-field-subscript-wrapper .mat-hint{
+        line-height: 1.2;
+        white-space: normal;
+    }
 }

@@ -1,4 +1,72 @@
 <mat-card>
+    <div class="upload-panel">
+        <div class="upload-box">
+            <div class="upload-header">
+                <h4>Auto-fill from PO / Invoice</h4>
+                <span class="upload-hint">Drag & drop PDF or image (best effort)</span>
+            </div>
+            <div class="drop-zone" [class.drag-over]="isDragOver"
+                 (click)="triggerBrowse()"
+                 (dragover)="onDragOver($event)"
+                 (dragleave)="onDragLeave($event)"
+                 (drop)="onDrop($event)">
+                <div class="drop-text">
+                    <mat-icon>cloud_upload</mat-icon>
+                    <span>Drop file here or click to browse</span>
+                </div>
+                <span class="upload-file" *ngIf="documentFile">{{documentFile.name}}</span>
+                <mat-progress-spinner *ngIf="isParsing" diameter="24" mode="indeterminate"></mat-progress-spinner>
+                <input #docInput class="hidden-input" type="file" accept=".pdf,image/*"
+                    (change)="onDocumentSelected($event)">
+            </div>
+            <div class="draft-panel" *ngIf="parsedDraft">
+                <div class="draft-row">
+                    <mat-checkbox [(ngModel)]="draftOptions.customer">Customer</mat-checkbox>
+                    <div class="draft-value">
+                        {{parsedDraft.customerName || '-'}} {{parsedDraft.customerCompany ? '(' + parsedDraft.customerCompany + ')' : ''}}
+                    </div>
+                </div>
+                <div class="draft-row">
+                    <mat-checkbox [(ngModel)]="draftOptions.contact">Contact</mat-checkbox>
+                    <div class="draft-value">
+                        {{parsedDraft.customerEmail || '-'}} {{parsedDraft.customerPhone || ''}}
+                    </div>
+                </div>
+                <div class="draft-row">
+                    <mat-checkbox [(ngModel)]="draftOptions.delivery">Delivery</mat-checkbox>
+                    <div class="draft-value">
+                        {{parsedDraft.deliveryAddress || '-'}}
+                    </div>
+                </div>
+                <div class="draft-row">
+                    <mat-checkbox [(ngModel)]="draftOptions.invoice">Invoice</mat-checkbox>
+                    <div class="draft-value">
+                        DO {{parsedDraft.invoiceNumber || '-'}} | PO {{parsedDraft.poNumber || '-'}}
+                    </div>
+                </div>
+                <div class="draft-row">
+                    <mat-checkbox [(ngModel)]="draftOptions.goods">Goods</mat-checkbox>
+                    <div class="draft-value">
+                        <span *ngIf="parsedDraft.goods?.length; else noGoods">
+                            <span *ngFor="let item of parsedDraft.goods; let last = last">
+                                {{item.goodsName}} ({{item.quantity}}){{last ? '' : ', '}}
+                            </span>
+                        </span>
+                        <ng-template #noGoods>-</ng-template>
+                    </div>
+                </div>
+                <div class="draft-actions">
+                    <button mat-raised-button color="primary" type="button" (click)="applyDraft()">Apply Draft</button>
+                    <button mat-button type="button" (click)="discardDraft()">Discard</button>
+                </div>
+            </div>
+            <mat-chip-list *ngIf="parseWarnings.length">
+                <mat-chip color="warn" selected *ngFor="let warning of parseWarnings">
+                    {{warning}}
+                </mat-chip>
+            </mat-chip-list>
+        </div>
+    </div>
     <mat-horizontal-stepper #stepper linear>
         <mat-step [stepControl]="customerForm">
             <ng-template matStepLabel>Fill out customer Form</ng-template>
