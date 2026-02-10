@@ -2,7 +2,7 @@ const nodemailer = require("nodemailer");
 const pug = require("pug");
 const { htmlToText } = require("html-to-text");
 const path = require("path");
-require("dotenv");
+require("dotenv").config();
 module.exports = class Email {
   constructor(user, type = null) {
     if (type == "orderDelivered") {
@@ -31,11 +31,30 @@ module.exports = class Email {
     });
   }
 
-  async orderDelivered(template, subject) {
+  async orderDelivered(template, subject, attachment) {
     const html = pug.renderFile(`${__dirname}/../templates/${template}.pug`, {
       name: this.name,
       email: this.email,
     });
+
+    const attachments = [];
+    if (attachment) {
+      attachments.push(attachment);
+    } else if (this.do_number) {
+      const fallbackPath = path.join(
+        __dirname,
+        "..",
+        "..",
+        "uploads",
+        "invoice",
+        `invoice-${this.do_number}.pdf`
+      );
+      attachments.push({
+        filename: `invoice-${this.do_number}.pdf`,
+        path: fallbackPath,
+        contentType: "application/pdf",
+      });
+    }
 
     const mailOptions = {
       from: this.from,
@@ -44,21 +63,14 @@ module.exports = class Email {
       subject,
       html,
       text: htmlToText(html),
-      attachments: [
-        {
-          filename: `invoice-${this.do_number}.pdf`,
-          path: `${__dirname}/../../docs/invoice-${this.do_number}.pdf`,
-          contentType: "application/pdf",
-        },
-      ],
+      attachments,
     };
 
-    console.log("Mail send successfully");
-
-    await this.newTransport().sendMail(mailOptions, (error, info) => {
-      if (error) {
-        return console.log(error);
-      }
-    });
+    try {
+      const info = await this.newTransport().sendMail(mailOptions);
+      console.log("Mail sent", info?.messageId || "");
+    } catch (error) {
+      console.error("Mail send failed:", error);
+    }
   }
 };

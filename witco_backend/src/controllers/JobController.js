@@ -906,27 +906,39 @@ exports.invoice = catchAsync(async (req,res,next)=>{
     );
   }
 
-  if (jobinvoice.customer_email && jobinvoice.customer_email!=""){
-  let myUser = {
-     name: jobinvoice.customer_firstName,
-     email: jobinvoice.customer_email,do_number:jobinvoice.do_number 
-  };
+  if (jobinvoice.customer_email && jobinvoice.customer_email != "") {
+    let myUser = {
+      name: jobinvoice.customer_firstName,
+      email: jobinvoice.customer_email,
+      do_number: jobinvoice.do_number,
+    };
 
-  await new Email(myUser, "orderDelivered").orderDelivered(
-    "orderdelivered",
-    "Order Delivered Successfully"
-  );
+    await new Email(myUser, "orderDelivered").orderDelivered(
+      "orderdelivered",
+      "Order Delivered Successfully",
+      {
+        filename: `invoice-${do_number}.pdf`,
+        content: pdfBytes,
+        contentType: "application/pdf",
+      }
+    );
   }
 
   if (jobinvoice.customer_email2 && jobinvoice.customer_email2 != "") {
     let myUser = {
       name: jobinvoice.customer_firstName,
-      email: jobinvoice.customer_email2, do_number: jobinvoice.do_number
+      email: jobinvoice.customer_email2,
+      do_number: jobinvoice.do_number,
     };
 
     await new Email(myUser, "orderDelivered").orderDelivered(
       "orderdelivered",
-      "Order Delivered Successfully"
+      "Order Delivered Successfully",
+      {
+        filename: `invoice-${do_number}.pdf`,
+        content: pdfBytes,
+        contentType: "application/pdf",
+      }
     );
   }
 
