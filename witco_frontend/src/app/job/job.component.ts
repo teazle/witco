@@ -398,9 +398,13 @@ export class JobComponent implements OnInit,AfterViewInit {
       // })
       this.authService.patchData(`goods/edit/${this.goods_id}`, this.goodsForm.value).subscribe((res: any) => {
         this.goods_id = res.data._id;
+        const customerValue = this.customerForm.value;
+        const deliveryAddress = customerValue.deliveryAddress || customerValue.address || '';
         let data = {
           customer_id: this.customer_id,
-          goods_id: this.goods_id
+          goods_id: this.goods_id,
+          customer_address: customerValue.address || '',
+          customer_deliveryAddress: deliveryAddress
         }
         this.authService.patchData(`jobs/edit/${this.formId}`, data).subscribe((res: any) => {
           this.toastService.success('Goods Added and Job Created Successfully...');
@@ -437,7 +441,15 @@ export class JobComponent implements OnInit,AfterViewInit {
             invoiceNumber: good.invoiceNumber,
             zipcode:good.zipcode,
             goods: this.setGood(good.goods)
-          })
+          });
+          const deliveryAddressFallback =
+            this.customerForm.get('deliveryAddress').value ||
+            good.deliveryAddress ||
+            this.customerForm.get('address').value ||
+            '';
+          this.customerForm.patchValue({
+            deliveryAddress: deliveryAddressFallback
+          });
       },(err)=>{
         this.authService.setLoader(false)
       })

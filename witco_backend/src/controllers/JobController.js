@@ -405,9 +405,17 @@ exports.editJob = catchAsync(async (req, res, next) => {
   if (!req.params.id || req.params.id.length !== 24) {
     return next(new AppError("Please Provide Valid Id", 400));
   }
+  const updateData = { ...req.body };
+  if (
+    Object.prototype.hasOwnProperty.call(updateData, "deliveryAddress") &&
+    !Object.prototype.hasOwnProperty.call(updateData, "customer_deliveryAddress")
+  ) {
+    updateData.customer_deliveryAddress = updateData.deliveryAddress;
+  }
+  delete updateData.deliveryAddress;
   const editJob = await Job.findOneAndUpdate(
     { _id: req.params.id },
-    req.body,
+    { $set: updateData },
     { new: true }
   );
   res.status(200).json({
@@ -476,9 +484,9 @@ exports.getAllJob = catchAsync(async (req, res, next) => {
     });
   }
   if (searchField && searchValueRaw && allowedSearchFields.has(searchField)) {
-    const searchValue = String(searchValueRaw).trim();
+    const searchValue = String(searchValueRaw).trim().replace(/\s+/g, " ");
     if (searchValue.length) {
-      const regex = new RegExp(escapeRegex(searchValue), "i");
+      const regex = new RegExp(escapeRegex(searchValue).replace(/\s+/g, "\\s+"), "i");
       if (searchField === "deliveryAddress") {
         andFilters.push({
           $or: [
@@ -587,14 +595,18 @@ exports.getAllJob = catchAsync(async (req, res, next) => {
     records: [{ $skip: pageSize * (page-1) }, { $limit: pageSize }],
   },
 },
-]);
+]).collation({ locale: "en", strength: 2, numericOrdering: true });
 
   if (!joball) {
     throw new AppError("Jobs Not Found",404);
   }else{
  
     joball[0].records.forEach((job) => {
-      job.createdAt.setTime(job.createdAt.getTime() + 8 * 60 * 60 * 1000);
+      if (!job.createdAt) return;
+      const createdAt = new Date(job.createdAt);
+      if (isNaN(createdAt.getTime())) return;
+      createdAt.setTime(createdAt.getTime() + 8 * 60 * 60 * 1000);
+      job.createdAt = createdAt;
     });
   }
   res.send({

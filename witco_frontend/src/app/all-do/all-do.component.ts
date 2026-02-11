@@ -118,6 +118,7 @@ export class AllDoComponent implements OnInit {
     );
   }
     deliveringOrder(){
+    this.selectedVal = 'Delivering';
     this.currentPage = 0;
     this.sortField = 'updatedAt';
     this.sortType = 'DESC';
@@ -125,6 +126,7 @@ export class AllDoComponent implements OnInit {
   }
 
   delivered(){
+    this.selectedVal = 'Delivered';
     this.currentPage = 0;
     this.sortField = 'delivery_time';
     this.sortType = 'DESC';

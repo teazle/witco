@@ -32,32 +32,8 @@ File: scss
 @import 'glass';
 
 
-// Red Theme
-
-.danger {  
-	@import 'colors/red';
-  	@include angular-material-theme($red-app-theme);
-}
-
-// Blue Theme
-
-.blue {  
-	@import 'colors/blue';
-  	@include angular-material-theme($blue-app-theme);
-}
-
-// Green Theme
-
-.green { 
-	@import 'colors/green'; 
-  	@include angular-material-theme($green-app-theme);
-}
-
-// Dark Theme
-
-.dark { 
-	@import 'colors/dark'; 
-  	@include angular-material-theme($dark-theme); 
-}
+/* Theme toggle blocks removed.
+   These scoped Angular Material mixins generate malformed CSS in production
+   minification (raw nested selectors), which breaks parsing of later rules. */
   
 

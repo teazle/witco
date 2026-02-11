@@ -3,6 +3,7 @@ const Goods = require("../models/goodsModel");
 const Jobs =  require("../models/jobModel");
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/AppError");
+const mongoose = require("mongoose");
 
 exports.addGoods = catchAsync(async (req, res, next) => {
     const {goods,invoiceNumber,zipcode,inv_temp} = req.body
@@ -59,15 +60,31 @@ exports.editGoods = catchAsync(async (req,res,next)=>{
   if(!req.params.id || req.params.id.length !== 24){
     return next(new AppError("Please Provide Valid Id",400));
   }
+  const goodsObjectId = new mongoose.Types.ObjectId(req.params.id);
+  const legacyGoodsDoc = await Goods.collection.findOne(
+    { _id: goodsObjectId },
+    { projection: { deliveryAddress: 1 } }
+  );
+  const legacyDeliveryAddress = legacyGoodsDoc && legacyGoodsDoc.deliveryAddress
+    ? String(legacyGoodsDoc.deliveryAddress).trim()
+    : "";
   const job = await Jobs.findOne({goods_id:req.params.id});
   if(!job){
     return next(new AppError("Job Does Not Exist",400));
   }
-  job.do_number = req.body.invoiceNumber;
+  if (req.body.invoiceNumber) {
+    job.do_number = req.body.invoiceNumber;
+  }
+  if (
+    (!job.customer_deliveryAddress || !String(job.customer_deliveryAddress).trim()) &&
+    legacyDeliveryAddress
+  ) {
+    job.customer_deliveryAddress = legacyDeliveryAddress;
+  }
   await job.save();
   const editGoods =  await Goods.findOneAndUpdate(
     { _id: req.params.id },
-    req.body,
+    { $set: req.body },
     {new:true}
   );
   
