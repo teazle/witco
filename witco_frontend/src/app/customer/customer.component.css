@@ -3,75 +3,148 @@ table{
     table-layout: fixed;
 }
 .r-5 {
-    min-width: 56px;
+    width: 56px;
 }
 
 .r-10 {
-    min-width: 100px;
+    width: 100px;
 }
 
 .r-15 {
-    min-width: 120px;
+    width: 120px;
 }
 
 .r-20 {
-    min-width: 150px;
+    width: 150px;
 }
 
 .r-30 {
-    min-width: 160px;
-    max-width: 220px;
+    width: 200px;
 }
 .action{
     display: flex;
     align-items: center;
-    justify-content: flex-start;
-    gap: 8px;
+    justify-content: center;
+    gap: 6px;
 }
 mat-icon{
     cursor: pointer;
 }
 
 .mat-column-position {
-    flex: 0 0 6%;
+    flex: 0 0 7%;
     max-width: 56px;
 }
 
 .mat-column-firstName {
-    flex: 0 0 14%;
+    flex: 0 0 15%;
 }
 
 .mat-column-email {
-    flex: 0 0 18%;
+    flex: 0 0 17%;
 }
 
 .mat-column-companyName {
-    flex: 0 0 20%;
+    flex: 0 0 18%;
 }
 
 .mat-column-phone {
-    flex: 0 0 14%;
+    flex: 0 0 13%;
 }
 
 .mat-column-address {
-    flex: 0 0 22%;
+    flex: 0 0 21%;
 }
 
 .mat-column-action {
-    flex: 0 0 6%;
+    flex: 0 0 9%;
+    min-width: 88px;
     justify-content: center;
 }
 
 .mat-header-cell,
 .mat-cell {
-    padding-left: 10px;
-    padding-right: 10px;
+    padding-left: 8px;
+    padding-right: 8px;
 }
 
+.mat-column-firstName,
 .mat-column-email,
 .mat-column-companyName,
 .mat-column-address {
     white-space: normal;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
+    word-break: normal;
+    hyphens: auto;
     line-height: 1.4;
+}
+
+@media (max-width: 1200px) {
+    .mat-header-cell,
+    .mat-cell {
+        padding-left: 6px;
+        padding-right: 6px;
+    }
+
+    .mat-column-position {
+        flex: 0 0 6%;
+        max-width: 48px;
+    }
+
+    .mat-column-firstName {
+        flex: 0 0 16%;
+    }
+
+    .mat-column-email {
+        flex: 0 0 18%;
+    }
+
+    .mat-column-companyName {
+        flex: 0 0 17%;
+    }
+
+    .mat-column-phone {
+        flex: 0 0 12%;
+    }
+
+    .mat-column-address {
+        flex: 0 0 23%;
+    }
+
+    .mat-column-action {
+        flex: 0 0 8%;
+        min-width: 72px;
+    }
+}
+
+@media (max-width: 1060px) {
+    .mat-column-position {
+        flex: 0 0 7%;
+        max-width: 44px;
+    }
+
+    .mat-column-companyName {
+        display: none;
+    }
+
+    .mat-column-firstName {
+        flex: 0 0 24%;
+    }
+
+    .mat-column-email {
+        display: none;
+    }
+
+    .mat-column-phone {
+        flex: 0 0 16%;
+    }
+
+    .mat-column-address {
+        flex: 0 0 44%;
+    }
+
+    .mat-column-action {
+        flex: 0 0 9%;
+        min-width: 54px;
+    }
 }

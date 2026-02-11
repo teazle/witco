@@ -6,10 +6,7 @@
     position: relative;
     min-height: 100vh;
     overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 24px;
+    padding: 0;
     background: hsl(var(--background));
 }
 
@@ -35,11 +32,13 @@
 }
 
 .login-wrapper {
-    position: relative;
+    position: absolute;
+    inset: 0;
     z-index: 2;
-    width: 100%;
     display: flex;
+    align-items: center;
     justify-content: center;
+    padding: 24px;
 }
 
 .login-card {

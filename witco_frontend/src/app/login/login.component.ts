@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatDialog } from '@angular/material'
 import { AuthService } from '../services/auth.service';
@@ -10,12 +10,13 @@ import { ToastrService } from 'ngx-toastr'
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.css']
 })
-export class LoginComponent implements OnInit {
+export class LoginComponent implements OnInit, AfterViewInit {
 
   loginForm: FormGroup;
   loginFormErrors: any;
   latitude:any;
   longitude:any
+  @ViewChild('bgVideo', { static: false }) bgVideo: ElementRef<HTMLVideoElement>;
   showPassword:boolean = false; 
   constructor(private router: Router, private authService: AuthService, private formBuilder: FormBuilder, private toast : ToastrService) {
     this.loginFormErrors = {
@@ -33,6 +34,26 @@ export class LoginComponent implements OnInit {
     this.loginForm.valueChanges.subscribe(() => {
       this.onLoginFormValuesChanged(); 
     });
+  }
+
+  ngAfterViewInit() {
+    this.ensureVideoPlayback();
+  }
+
+  private ensureVideoPlayback() {
+    if (!this.bgVideo || !this.bgVideo.nativeElement) {
+      return;
+    }
+    const video = this.bgVideo.nativeElement;
+    video.muted = true;
+    video.defaultMuted = true;
+    video.playsInline = true;
+    const playPromise = video.play();
+    if (playPromise && typeof playPromise.catch === 'function') {
+      playPromise.catch(() => {
+        // Keep poster visible if autoplay is blocked.
+      });
+    }
   }
 
    onSubmit(data) {
@@ -142,4 +163,3 @@ togglePasswordVisibility() {
   this.showPassword = !this.showPassword;
 }
 }
-
