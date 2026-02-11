@@ -478,7 +478,7 @@ exports.getAllJob = catchAsync(async (req, res, next) => {
   if (searchField && searchValueRaw && allowedSearchFields.has(searchField)) {
     const searchValue = String(searchValueRaw).trim();
     if (searchValue.length) {
-      const regex = { $regex: new RegExp(escapeRegex(searchValue), "i") };
+      const regex = new RegExp(escapeRegex(searchValue), "i");
       if (searchField === "deliveryAddress") {
         andFilters.push({
           $or: [
@@ -517,6 +517,7 @@ exports.getAllJob = catchAsync(async (req, res, next) => {
   }
   const sortFieldExprMap = {
     invoiceNumber: { $ifNull: ["$invoiceNumber", "$do_number"] },
+    do_number: { $ifNull: ["$do_number", "$invoiceNumber"] },
     deliveryAddress: {
       $ifNull: ["$deliveryAddress", { $ifNull: ["$customer_deliveryAddress", "$customer_address"] }],
     },
@@ -551,33 +552,19 @@ exports.getAllJob = catchAsync(async (req, res, next) => {
 {
   $replaceRoot: { newRoot: { $mergeObjects: [ { $arrayElemAt: [ "$goods" , 0 ] }, "$$ROOT" ] }}
 },{
+  $match: where
+},{
   $set:{field: sortFieldExpr}
 },
 {
   $addFields: {
     lowercaseField: {
       $cond: {
-        if: { $or: [{ $eq: [{ $type: "$field" }, "date"] }, { $eq: [{ $type: "$field" }, "long"] }] },
+        if: {
+          $in: [{ $type: "$field" }, ["date", "long", "int", "double", "decimal"]]
+        },
         then: "$field",
-        else: {
-          $cond: {
-            if: { $or: [{ $eq: ["$field", ""] }, { $not: "$field" }] },
-            then: "",
-            else: {
-              $cond: {
-                if: { $regexMatch: { input: { $convert: { input: "$field", to: "string", onError: "", onNull: "" } }, regex: /^[0-9]+$/ } },
-                then: { $toInt: "$field" },
-                else: {
-                  $cond: {
-                    if: { $regexMatch: { input: { $convert: { input: "$field", to: "string", onError: "", onNull: "" } }, regex: /^[0-9 ]+$/ } },
-                    then: { $toInt: { $trim: { input: { $convert: { input: "$field", to: "string" } } } } },
-                    else: { $toLower: { $convert: { input: "$field", to: "string", onError: "", onNull: "" } } }
-                  }
-                }
-              }
-            }
-          }
-        }
+        else: { $toLower: { $convert: { input: "$field", to: "string", onError: "", onNull: "" } } }
       }
     }
   }
@@ -587,7 +574,6 @@ exports.getAllJob = catchAsync(async (req, res, next) => {
     lowercaseField: type  // 1 for ascending, -1 for descending
   }
 },
-{$match:where},
     { $project: { goods: 0,
       //  lowercaseField :0,field:0
       } },

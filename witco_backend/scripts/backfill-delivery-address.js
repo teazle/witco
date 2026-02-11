@@ -42,7 +42,9 @@ async function run() {
 
   for (const job of jobs) {
     const goods = goodsMap.get(String(job.goods_id));
-    const candidate = goods && goods.deliveryAddress ? String(goods.deliveryAddress).trim() : "";
+    const fromGoods = goods && goods.deliveryAddress ? String(goods.deliveryAddress).trim() : "";
+    const fromJobAddress = job && job.customer_address ? String(job.customer_address).trim() : "";
+    const candidate = fromGoods || fromJobAddress;
     if (candidate) {
       updates.push({
         updateOne: {
