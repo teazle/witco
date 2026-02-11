@@ -1,8 +1,9 @@
 table{
     width: 100%;
+    table-layout: fixed;
 }
 .r-5 {
-    min-width: 50px;
+    min-width: 56px;
 }
 
 .r-10 {
@@ -10,16 +11,16 @@ table{
 }
 
 .r-15 {
-    min-width: 150px;
+    min-width: 120px;
 }
 
 .r-20 {
-    min-width: 210px;
+    min-width: 150px;
 }
 
 .r-30 {
-    min-width: 310px;
-    max-width: 324px;
+    min-width: 160px;
+    max-width: 220px;
 }
 .action{
     display: flex;
@@ -29,4 +30,48 @@ table{
 }
 mat-icon{
     cursor: pointer;
+}
+
+.mat-column-position {
+    flex: 0 0 6%;
+    max-width: 56px;
+}
+
+.mat-column-firstName {
+    flex: 0 0 14%;
+}
+
+.mat-column-email {
+    flex: 0 0 18%;
+}
+
+.mat-column-companyName {
+    flex: 0 0 20%;
+}
+
+.mat-column-phone {
+    flex: 0 0 14%;
+}
+
+.mat-column-address {
+    flex: 0 0 22%;
+}
+
+.mat-column-action {
+    flex: 0 0 6%;
+    justify-content: center;
+}
+
+.mat-header-cell,
+.mat-cell {
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+.mat-column-email,
+.mat-column-companyName,
+.mat-column-address {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.4;
 }

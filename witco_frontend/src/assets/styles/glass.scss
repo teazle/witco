@@ -112,5 +112,52 @@ Glassmorphism overrides for the authenticated app layout.
 
 .app-glass .page-content .mat-form-field-label,
 .app-glass .page-content .mat-input-element {
-    color: hsl(var(--primary-foreground));
+    color: hsl(var(--foreground));
+}
+
+.app-glass .page-content .mat-form-field-label {
+    color: hsl(var(--muted-foreground) / 0.92);
+}
+
+.app-glass .page-content .mat-form-field.mat-focused .mat-form-field-label {
+    color: hsl(var(--primary));
+}
+
+.app-glass .page-content .mat-input-element,
+.app-glass .page-content .mat-select-value-text,
+.app-glass .page-content .mat-select-arrow {
+    color: hsl(var(--foreground));
+}
+
+.app-glass .page-content .mat-input-element::placeholder {
+    color: hsl(var(--muted-foreground) / 0.72);
+}
+
+.app-glass .mat-table .mat-row {
+    transition: background 0.2s ease;
+    border-bottom: 1px solid hsl(var(--foreground) / 0.12);
+}
+
+.app-glass .mat-table .mat-row:hover {
+    background: hsl(216 36% 88% / 0.5) !important;
+}
+
+.app-glass .mat-table .mat-header-row {
+    background: hsl(0 0% 100% / 0.88);
+}
+
+.app-glass .mat-table .mat-header-cell {
+    color: hsl(var(--foreground) / 0.88);
+}
+
+.app-glass .mat-table .mat-cell {
+    color: hsl(var(--foreground) / 0.7);
+}
+
+.app-glass .mat-paginator,
+.app-glass .mat-paginator .mat-select-value,
+.app-glass .mat-paginator .mat-select-arrow,
+.app-glass .mat-paginator .mat-paginator-page-size-label,
+.app-glass .mat-paginator .mat-paginator-range-label {
+    color: hsl(var(--foreground) / 0.82);
 }
