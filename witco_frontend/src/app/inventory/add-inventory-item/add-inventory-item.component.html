@@ -2,9 +2,9 @@
   <div class="page-header">
     <h5 class="page-title">{{title}}</h5>
   </div>
-  <mat-card-content>
+  <mat-card-content class="content-wrap">
     <form class="example-form" [formGroup]="inventoryForm" (ngSubmit)="onSubmit()">
-      <mat-card-content class="form-grid">
+      <div class="form-grid">
         <mat-form-field class="example-full-width span-2">
           <input matInput formControlName="name" placeholder="Item Name" autocomplete="off">
         </mat-form-field>
@@ -23,7 +23,7 @@
         </mat-form-field>
 
         <mat-slide-toggle formControlName="isActive">Active</mat-slide-toggle>
-      </mat-card-content>
+      </div>
       <div class="form-actions">
         <div class="actions-left">
           <button mat-stroked-button type="button" (click)="goBack()">Back</button>

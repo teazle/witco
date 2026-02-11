@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit } from '@angular/core';
 import { AuthService } from '../services/auth.service';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
@@ -11,7 +11,10 @@ import { MatDialog } from '@angular/material';
   styleUrls: ['./customer.component.css']
 })
 export class CustomerComponent implements OnInit {
-  displayedColumns: string[] = ['position', 'firstName', 'email', 'companyName','phone', 'address', 'action'];
+  displayedColumnsDesktop: string[] = ['position', 'firstName', 'email', 'companyName', 'phone', 'address', 'action'];
+  displayedColumnsTablet: string[] = ['position', 'firstName', 'email', 'phone', 'address', 'action'];
+  displayedColumnsMobile: string[] = ['position', 'firstName', 'phone', 'address', 'action'];
+  displayedColumns: string[] = [];
   dataSource: any;
   pageSizeOptions = [5, 10, 25, 50];
   pageSize = 5;
@@ -28,7 +31,26 @@ export class CustomerComponent implements OnInit {
   ) { }
 
   ngOnInit() {
+    this.updateDisplayedColumns();
     this.getCustomers()
+  }
+
+  @HostListener('window:resize')
+  onWindowResize() {
+    this.updateDisplayedColumns();
+  }
+
+  updateDisplayedColumns() {
+    const width = window.innerWidth;
+    if (width >= 1366) {
+      this.displayedColumns = this.displayedColumnsDesktop;
+      return;
+    }
+    if (width >= 1100) {
+      this.displayedColumns = this.displayedColumnsTablet;
+      return;
+    }
+    this.displayedColumns = this.displayedColumnsMobile;
   }
   getCustomers() {
     this.authService.setLoader(true);

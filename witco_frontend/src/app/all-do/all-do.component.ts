@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, HostListener, OnInit, ViewChild } from '@angular/core';
 import { MatDialog, MatTableDataSource } from '@angular/material';
 import { AuthService } from '../services/auth.service';
 import * as moment from 'moment';
@@ -33,8 +33,14 @@ export class AllDoComponent implements OnInit {
   pageSize = 5;
   currentPage = 0;
   pageSizeOptions: number[] = [5, 10, 25, 50];
-  displayedColumns: string[] = ['srno','customer', 'invoiceNumber','inv_temp', 'customer_companyName','deliveryAddress','driver','driverEmail','vehicleNumber','Date','action','editJob'];
-  displayedColumnsDelivered: string[] = ['srno','invoice_no','customer', 'invoiceNumber','inv_temp', 'customer_companyName', 'deliveryAddress','driver','driverEmail','vehicleNumber','DeliveryDate','action','pdf','invoice'];
+  displayedColumnsDesktop: string[] = ['srno', 'customer', 'invoiceNumber', 'inv_temp', 'customer_companyName', 'deliveryAddress', 'driver', 'driverEmail', 'vehicleNumber', 'Date', 'action', 'editJob'];
+  displayedColumnsTablet: string[] = ['srno', 'customer', 'invoiceNumber', 'inv_temp', 'customer_companyName', 'deliveryAddress', 'driver', 'Date', 'action', 'editJob'];
+  displayedColumnsMobile: string[] = ['srno', 'customer', 'invoiceNumber', 'deliveryAddress', 'driver', 'Date', 'action', 'editJob'];
+  displayedColumnsDeliveredDesktop: string[] = ['srno', 'invoice_no', 'customer', 'invoiceNumber', 'inv_temp', 'customer_companyName', 'deliveryAddress', 'driver', 'driverEmail', 'vehicleNumber', 'DeliveryDate', 'action', 'pdf', 'invoice'];
+  displayedColumnsDeliveredTablet: string[] = ['srno', 'invoice_no', 'customer', 'invoiceNumber', 'inv_temp', 'customer_companyName', 'deliveryAddress', 'driver', 'DeliveryDate', 'action', 'pdf', 'invoice'];
+  displayedColumnsDeliveredMobile: string[] = ['srno', 'invoice_no', 'customer', 'invoiceNumber', 'deliveryAddress', 'driver', 'DeliveryDate', 'action', 'pdf', 'invoice'];
+  displayedColumns: string[] = [];
+  displayedColumnsDelivered: string[] = [];
   selectedDriver:any;
   sortField = 'delivery_time';
   sortType: 'ASCE' | 'DESC' = 'DESC';
@@ -73,9 +79,31 @@ export class AllDoComponent implements OnInit {
   ) {}
 
     ngOnInit(): void {
+      this.updateDisplayedColumns();
       this.deliveringOrder();
       this.getAllDriver();
     }
+
+  @HostListener('window:resize')
+  onWindowResize() {
+    this.updateDisplayedColumns();
+  }
+
+  updateDisplayedColumns() {
+    const width = window.innerWidth;
+    if (width >= 1366) {
+      this.displayedColumns = this.displayedColumnsDesktop;
+      this.displayedColumnsDelivered = this.displayedColumnsDeliveredDesktop;
+      return;
+    }
+    if (width >= 1100) {
+      this.displayedColumns = this.displayedColumnsTablet;
+      this.displayedColumnsDelivered = this.displayedColumnsDeliveredTablet;
+      return;
+    }
+    this.displayedColumns = this.displayedColumnsMobile;
+    this.displayedColumnsDelivered = this.displayedColumnsDeliveredMobile;
+  }
 
   invoiceUpdate(invoice_no: string, job_id: string) {
     console.log("job_id", job_id);

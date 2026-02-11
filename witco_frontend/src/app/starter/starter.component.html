@@ -1,25 +1,16 @@
-<!-- ============================================================== -->
-<!-- Simple four boxes Row -->
-<!-- ============================================================== -->
-<div class="container">
-  <!-- column -->
-  <div>
-    <mat-card class="page-card">
-      <div class="page-header">
-          <h5 class="page-title">All Drivers</h5>
-          <div class="page-actions">
-            <button mat-raised-button color="primary" (click)="adduser()">
-              <mat-icon>add</mat-icon>
-              Add
-            </button>
-          </div>
-      </div>
-      
-      
-      <mat-card-content>
-        <div class='table-wrap mat-elevation-z8'>
-        <!-- Row -->
-        <mat-table [dataSource]="dataSource">
+<mat-card class="page-card">
+  <div class="page-header">
+    <h5 class="page-title">All Drivers</h5>
+    <div class="page-actions">
+      <button mat-raised-button color="primary" (click)="adduser()">
+        <mat-icon>add</mat-icon>
+        Add
+      </button>
+    </div>
+  </div>
+
+  <mat-card-content class="table-wrap">
+    <table mat-table [dataSource]="dataSource" class="table-shell">
         <!--- Note that these columns can be defined in any order.
                           The actual rendered columns are set as a property on the row definition" -->
 
@@ -76,10 +67,10 @@
             <th mat-header-cell *matHeaderCellDef class="font second"> Action </th>
             <td mat-cell *cdkCellDef="let element" class="second">
               <button mat-button class="btn" data-toggle="tooltip" title="Edit!">
-                <mat-icon color="primary" (click)="editUser(this.element._id)">edit</mat-icon>
+                <mat-icon color="primary" (click)="editUser(element._id)">edit</mat-icon>
               </button>
               <button mat-button class="btn" data-toggle="tooltip" title="Delete!">
-                <mat-icon color="warn" (click)="deleteUser(this.element._id)">delete</mat-icon>
+                <mat-icon color="warn" (click)="deleteUser(element._id)">delete</mat-icon>
               </button>
               <button mat-button class="btn" data-toggle="tooltip" title="change password">
                 <mat-icon color="warn" (click)="model(changePassword)">vpn_key</mat-icon>
@@ -114,22 +105,15 @@
            </td>
           </ng-container>
 
-          <tr mat-header-row *matHeaderRowDef="displayedColumns" class="row"></tr>
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
           <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-        </mat-table>
-        <mat-paginator [length]="length"
+        </table>
+    </mat-card-content>
+    <mat-paginator [length]="length"
         [pageSize]="pageSize"
         [pageSizeOptions]="pageSizeOptions"
         aria-label="Select page"
         (page)="pageChange($event)"
         >
     </mat-paginator>
-      </div>
-      </mat-card-content>
-
-    </mat-card>
-  </div>
-
-
-  <!-- column -->
-</div>
+</mat-card>

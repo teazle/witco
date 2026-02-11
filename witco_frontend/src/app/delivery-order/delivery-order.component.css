@@ -1,80 +1,47 @@
-h5 {
-  margin: 0;
-  font-weight: bold;
-  color: #41419e;
+.date-toolbar {
+  align-items: end;
 }
 
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.date-filter {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.search-btn {
-  background-color: #41419e;
-}
-
-mat-form-field {
-  width: 250px;
-  margin: 0;
-}
-
-::ng-deep .mat-form-field-appearance-outline .mat-form-field-wrapper {
-  margin: 0 !important;
-}
-
-@media only screen and (max-width: 1024px) {
-  mat-form-field {
-    width: 180px;
-  }
-}
-
-.board-toolbar {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 16px;
+.board-toolbar-card {
+  overflow: hidden;
 }
 
 .board-toolbar__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
+  border-bottom: 1px solid hsl(0 0% 100% / 0.2);
 }
 
 .board-toolbar__controls {
-  display: flex;
   align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
 }
 
-.board-toolbar__controls mat-form-field {
-  width: 260px;
+.board-toolbar__controls .mat-chip-list {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.board-toolbar__controls .mat-chip {
+  font-weight: 600;
+}
+
+.board-content {
+  padding-top: 16px;
 }
 
 .board {
   display: flex;
   gap: 16px;
-  padding: 16px;
   overflow-x: auto;
+  padding-bottom: 8px;
 }
 
 .column {
   min-width: 280px;
   max-width: 320px;
-  background: #f6f6fb;
-  border-radius: 12px;
-  padding: 12px;
+  background: hsl(0 0% 100% / 0.92);
+  border: 1px solid hsl(214 24% 86% / 0.85);
+  border-radius: 10px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -89,18 +56,18 @@ mat-form-field {
 .column-header h6 {
   margin: 0;
   font-size: 15px;
-  font-weight: 600;
-  color: #222;
+  font-weight: 700;
+  color: #1b2234;
 }
 
 .column-header .count {
   font-size: 12px;
-  color: #7a7a9c;
+  color: #5b6474;
 }
 
 .driver-email {
   font-size: 12px;
-  color: #50507a;
+  color: #4e5570;
 }
 
 .column-body {
@@ -112,9 +79,10 @@ mat-form-field {
 
 .job-card {
   background: #ffffff;
+  border: 1px solid #e2e7f0;
   border-radius: 10px;
   padding: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -141,7 +109,7 @@ mat-form-field {
 }
 
 .job-customer {
-  font-weight: 600;
+  font-weight: 700;
   color: #1e1e2e;
 }
 
@@ -169,4 +137,20 @@ mat-form-field {
 .no-data {
   text-align: center;
   padding: 20px 12px;
+}
+
+@media only screen and (max-width: 1365px) {
+  .column {
+    min-width: 260px;
+  }
+}
+
+@media only screen and (max-width: 1099px) {
+  .board-toolbar__controls {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+
+  .column {
+    min-width: 240px;
+  }
 }

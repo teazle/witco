@@ -320,6 +320,7 @@ export class JobComponent implements OnInit,AfterViewInit {
       this.saveCustomerDetails = false;
     }
     else {  
+      const deliveryAddress = value.deliveryAddress || value.address || '';
       let job={
         customer_firstName:value.firstName,
         customer_lastName:value.lastName ,
@@ -327,7 +328,7 @@ export class JobComponent implements OnInit,AfterViewInit {
         customer_email:value.email,
         customer_phone:value.code+value.phone ,
         customer_address:value.address,
-        customer_deliveryAddress: value.deliveryAddress,
+        customer_deliveryAddress: deliveryAddress,
         userRole:'customer'
       }
       this.authService.patchData(`jobs/edit/${this.job_id}`, job).subscribe((res:any) => {
@@ -342,6 +343,7 @@ export class JobComponent implements OnInit,AfterViewInit {
             code:res.data.customer_phone.slice(0,3),
             phone:res.data.customer_phone.slice(3,),
             address: res.data.customer_address,
+            deliveryAddress: res.data.customer_deliveryAddress || res.data.customer_address || '',
             userRole: 'customer'
           }
           this.saveCustomerDetails = false;
@@ -425,7 +427,7 @@ export class JobComponent implements OnInit,AfterViewInit {
         code:res.data.job.customer_phone.slice(0,3),
         phone:res.data.job.customer_phone.slice(3,),
         address: res.data.job.customer_address,
-        deliveryAddress: res.data.job.customer_deliveryAddress,
+        deliveryAddress: res.data.job.customer_deliveryAddress || res.data.job.customer_address || '',
         userRole: 'customer'
       });
       this.authService.getData(`goods/get/${this.goods_id}`).subscribe((response: any) => {
@@ -448,7 +450,7 @@ export class JobComponent implements OnInit,AfterViewInit {
         code:res.data.job.customer_phone.slice(0,3),
         phone:res.data.job.customer_phone.slice(3,),
         address: res.data.job.customer_address,
-        deliveryAddress: res.data.job.customer_deliveryAddress,
+        deliveryAddress: res.data.job.customer_deliveryAddress || res.data.job.customer_address || '',
         userRole: 'customer'
       }
     },(err)=>{
@@ -484,6 +486,7 @@ export class JobComponent implements OnInit,AfterViewInit {
   }
 
   setForm(data:any){
+    const deliveryAddress = data.deliveryAddress || data.address || '';
     this.customerForm.patchValue({
       firstName: data.firstName,
       lastName: data.lastName,
@@ -492,7 +495,7 @@ export class JobComponent implements OnInit,AfterViewInit {
       code:data.phone.slice(0,3),
       phone: data.phone.slice(3,),
       address: data.address,
-      deliveryAddress: data.deliveryAddress,
+      deliveryAddress,
       userRole: data.userRole
     });
     this.customer_id= data._id;

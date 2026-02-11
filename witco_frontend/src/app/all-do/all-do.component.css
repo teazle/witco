@@ -1,85 +1,138 @@
-.toggle{
-    padding: 10px;
+.toggle-wrap {
     display: flex;
     justify-content: center;
-    border-radius: 6px;
 }
+
+.toggle {
+    padding: 6px;
+    display: inline-flex;
+    justify-content: center;
+    border-radius: var(--radius-control);
+}
+
 .table-card .mat-header-cell,
-.table-card .mat-cell{
+.table-card .mat-cell {
     font-size: 12px;
 }
-.edit-driver{
+
+.edit-driver {
     text-align: center;
 }
-.search-btn{
-  background-color: #41419e;
+
+.search-btn {
+    background-color: #41419e;
 }
-.mat-button-toggle-checked{
-    background-color: #41419e!important;
-    color: #FFFFFF;
+
+.mat-button-toggle-checked {
+    background-color: #41419e !important;
+    color: #ffffff;
 }
-.action{
+
+.action {
     display: flex;
     align-items: center;
     gap: 8px;
-}
-mat-button-toggle-group{
-border-radius: 4px; 
-}
-mat-form-field.invoice{
-    width: 150px;
-    margin-right: 20px;
-}
-@media only screen and (max-width: 1024px) {
-    .form-toolbar mat-form-field{
-        width: 180px;
-    }
-}
-@media only screen and (max-width: 878px) {
-    .form-toolbar mat-form-field{
-        width: 160px;
-    }
-}
-.no-data{
-    text-align: center;
-    padding: 20px 12px ;
-}
-mat-icon{
-    cursor: pointer;
-}
-.option-driver{
-    margin: 18px 0px;
-}
-.r-5{
-    min-width: 50px;
-}
-.r-10{
-    min-width: 100px;
-}
-.r-15{
-    min-width: 150px;
-}
-.r-20{
-    min-width: 210px;
-}
-.r-30{
-    min-width: 310px;
-    max-width: 324px;
-}
-.pdf-delivering{
-    display: none;
+    justify-content: center;
 }
 
-.unpaid{
+mat-button-toggle-group {
+    border-radius: var(--radius-control);
+}
+
+mat-form-field.invoice {
+    width: 150px;
+    margin-right: 12px;
+}
+
+.no-data {
+    text-align: center;
+    padding: 20px 12px;
+}
+
+mat-icon {
+    cursor: pointer;
+}
+
+.option-driver {
+    margin: 18px 0;
+}
+
+.r-5 {
+    min-width: 64px;
+}
+
+.r-10 {
+    min-width: 118px;
+}
+
+.r-15 {
+    min-width: 156px;
+}
+
+.r-20 {
+    min-width: 210px;
+}
+
+.r-30 {
+    min-width: 300px;
+    max-width: 320px;
+}
+
+.unpaid {
     text-align: center;
     color: red;
 }
-.paid{
+
+.paid {
     text-align: center;
     color: green;
 }
 
-table{
-    width: 100%!important;
+.table-shell {
+    min-width: 1600px;
 }
 
+.table-wrap.table-scroll-safe {
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+@media only screen and (max-width: 1365px) {
+    .r-30 {
+        min-width: 260px;
+    }
+
+    .r-20 {
+        min-width: 188px;
+    }
+
+    .r-15 {
+        min-width: 144px;
+    }
+
+    .table-shell {
+        min-width: 1450px;
+    }
+}
+
+@media only screen and (max-width: 1099px) {
+    .table-shell {
+        min-width: 1250px;
+    }
+
+    .r-30 {
+        min-width: 240px;
+    }
+
+    .r-20 {
+        min-width: 170px;
+    }
+
+    .r-15 {
+        min-width: 132px;
+    }
+
+    .r-10 {
+        min-width: 106px;
+    }
+}

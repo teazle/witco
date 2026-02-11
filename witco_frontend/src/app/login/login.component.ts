@@ -47,7 +47,7 @@ export class LoginComponent implements OnInit, AfterViewInit {
     const video = this.bgVideo.nativeElement;
     video.muted = true;
     video.defaultMuted = true;
-    video.playsInline = true;
+    video.setAttribute('playsinline', 'true');
     const playPromise = video.play();
     if (playPromise && typeof playPromise.catch === 'function') {
       playPromise.catch(() => {

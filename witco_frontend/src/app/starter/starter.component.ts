@@ -1,4 +1,4 @@
-import { Component, AfterViewInit, ViewChild, ChangeDetectorRef, OnInit } from '@angular/core';
+import { Component, AfterViewInit, ViewChild, ChangeDetectorRef, OnInit, HostListener } from '@angular/core';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import { FormControl, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -23,7 +23,10 @@ export interface PeriodicElement {
 })
 
 export class StarterComponent implements OnInit {
-  displayedColumns: string[] = ['srNo', 'first_name', 'email', 'phone', 'location', 'visibility', 'Action'];
+  displayedColumnsDesktop: string[] = ['srNo', 'first_name', 'email', 'phone', 'location', 'visibility', 'Action'];
+  displayedColumnsTablet: string[] = ['srNo', 'first_name', 'email', 'location', 'visibility', 'Action'];
+  displayedColumnsMobile: string[] = ['srNo', 'first_name', 'email', 'Action'];
+  displayedColumns: string[] = [];
   object = Object;
   dataSource: MatTableDataSource<PeriodicElement>;
   query: string;
@@ -56,11 +59,30 @@ export class StarterComponent implements OnInit {
      }
 
   ngOnInit() {
+    this.updateDisplayedColumns();
     this.changePasswordForm = this.formBuilder.group({
       NewPassword: ['', [Validators.required]],
       NewConfirmPassword: ['', [Validators.required]]
     }, { validator: PasswordValidator });
     this.getDriver();
+  }
+
+  @HostListener('window:resize')
+  onWindowResize() {
+    this.updateDisplayedColumns();
+  }
+
+  updateDisplayedColumns() {
+    const width = window.innerWidth;
+    if (width >= 1366) {
+      this.displayedColumns = this.displayedColumnsDesktop;
+      return;
+    }
+    if (width >= 1100) {
+      this.displayedColumns = this.displayedColumnsTablet;
+      return;
+    }
+    this.displayedColumns = this.displayedColumnsMobile;
   }
   onLoginFormValuesChanged() {
     for (const field in this.changePasswordFormErrors) {

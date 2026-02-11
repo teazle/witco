@@ -1010,78 +1010,80 @@ Grid
 /*******************
 Table
 *******************/
-.table{
-    width: 100%;
-    text-align: left;
-    border-collapse: collapse;
-    th, td{
-        padding: 12px 14px;
-        border-bottom: 1px solid $table-border;
-        font-size: 13px;
-        color: $bodytext;
-    }
-    th{
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        font-size: 11px;
-        color: $headingtext;
-        background: $light;
-    }
-}
-.table-rasponsive{
-    overflow:auto;
-    border: 1px solid $table-border;
-    border-radius: $radius;
-    background: $white;
-    .mat-table{
-        min-width: 280px;
-        background: transparent;
-    }
-    .mat-header-row{
-        background: $light;
-        .mat-header-cell{
-            white-space: nowrap;
+.main-container:not(.app-glass) {
+    .table{
+        width: 100%;
+        text-align: left;
+        border-collapse: collapse;
+        th, td{
+            padding: 12px 14px;
+            border-bottom: 1px solid $table-border;
+            font-size: 13px;
+            color: $bodytext;
+        }
+        th{
+            font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.08em;
             font-size: 11px;
             color: $headingtext;
+            background: $light;
+        }
+    }
+    .table-rasponsive{
+        overflow:auto;
+        border: 1px solid $table-border;
+        border-radius: $radius;
+        background: $white;
+        .mat-table{
+            min-width: 280px;
+            background: transparent;
+        }
+        .mat-header-row{
+            background: $light;
+            .mat-header-cell{
+                white-space: nowrap;
+                text-transform: uppercase;
+                letter-spacing: 0.08em;
+                font-size: 11px;
+                color: $headingtext;
+                font-weight: 600;
+            }
+        }
+        .mat-cell{
+                white-space: nowrap;
+                color: $bodytext;
+            }
+        .mat-row{
+            transition: background 0.2s ease;
+            &:hover{
+                background: $light;
+            }
+        }
+    }
+    .mat-table{
+        background: $white;
+        border-radius: $radius;
+        overflow: hidden;
+        .mat-header-row{
+            background: $light;
+        }
+        .mat-header-cell{
             font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-size: 11px;
+            color: $headingtext;
         }
-    }
-    .mat-cell{
-            white-space: nowrap;
+        .mat-cell{
             color: $bodytext;
+            font-size: 13px;
         }
-    .mat-row{
-        transition: background 0.2s ease;
-        &:hover{
-            background: $light;
-        }
-    }
-}
-.mat-table{
-    background: $white;
-    border-radius: $radius;
-    overflow: hidden;
-    .mat-header-row{
-        background: $light;
-    }
-    .mat-header-cell{
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        font-size: 11px;
-        color: $headingtext;
-    }
-    .mat-cell{
-        color: $bodytext;
-        font-size: 13px;
-    }
-    .mat-row{
-        transition: background 0.2s ease;
-        &:hover{
-            background: $light;
+        .mat-row{
+            transition: background 0.2s ease;
+            &:hover{
+                background: $light;
+            }
         }
     }
 }

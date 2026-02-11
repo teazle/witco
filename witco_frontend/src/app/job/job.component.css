@@ -18,7 +18,7 @@
     padding: 24px;
     background: radial-gradient(circle at 15% 10%, hsl(var(--primary) / 0.12), transparent 45%),
         linear-gradient(180deg, var(--job-bg) 0%, hsl(var(--background)) 55%, hsl(var(--secondary)) 100%);
-    border-radius: 18px;
+    border-radius: var(--radius-card);
 }
 
 .job-header {
@@ -59,7 +59,7 @@
 .stat-card {
     background: var(--job-card);
     border: 1px solid var(--job-border);
-    border-radius: 14px;
+    border-radius: var(--radius-control);
     padding: 10px 16px;
     min-width: 120px;
     box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
@@ -80,7 +80,7 @@
 
 .job-card {
     background: var(--job-card);
-    border-radius: 18px;
+    border-radius: var(--radius-card);
     border: 1px solid var(--job-border);
     box-shadow: var(--job-shadow);
     padding: 0;
@@ -101,7 +101,7 @@
 
 .upload-box {
     border: 2px dashed hsl(214 24% 85%);
-    border-radius: 14px;
+    border-radius: var(--radius-control);
     padding: 18px;
     background: hsl(var(--card));
     display: flex;
@@ -135,7 +135,7 @@
 
 .drop-zone {
     border: 1px dashed hsl(214 24% 85%);
-    border-radius: 12px;
+    border-radius: var(--radius-control);
     padding: 16px;
     min-height: 90px;
     display: flex;
@@ -166,7 +166,7 @@
 .draft-panel {
     margin-top: 12px;
     padding: 12px;
-    border-radius: 12px;
+    border-radius: var(--radius-control);
     background: hsl(238 45% 96%);
     display: flex;
     flex-direction: column;
@@ -195,7 +195,7 @@
 }
 
 .customer-card {
-    border-radius: 16px;
+    border-radius: var(--radius-card);
     border: 1px solid var(--job-border);
     box-shadow: 0 10px 26px rgba(15, 23, 42, 0.08);
     padding: 8px 6px 18px;
@@ -292,7 +292,7 @@
     align-items: center;
     justify-content: flex-start;
     padding: 12px;
-    border-radius: 12px;
+    border-radius: var(--radius-control);
     border: 1px solid var(--job-border);
     background: hsl(var(--card));
     margin-bottom: 12px;
@@ -400,7 +400,7 @@ mat-list {
 
 mat-card-content {
     width: 100%;
-    padding: 18px 18px 8px !important;
+    padding: 20px 24px 10px !important;
 }
 
 mat-error {
@@ -454,7 +454,7 @@ mat-error {
     }
 
     .job-card {
-        border-radius: 14px;
+        border-radius: var(--radius-card);
     }
 
     .upload-panel,

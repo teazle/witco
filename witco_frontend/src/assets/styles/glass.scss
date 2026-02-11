@@ -8,7 +8,7 @@ Glassmorphism overrides for the authenticated app layout.
     background: radial-gradient(circle at 12% 20%, rgba(79, 92, 184, 0.25), transparent 55%),
         radial-gradient(circle at 85% 10%, rgba(42, 139, 99, 0.25), transparent 45%),
         linear-gradient(135deg, #1a2140 0%, #0f1528 55%, #0c1224 100%);
-    color: hsl(var(--primary-foreground) / 0.88);
+    color: hsl(var(--primary-foreground) / 0.9);
 }
 
 .app-glass .mat-drawer-container,
@@ -24,10 +24,10 @@ Glassmorphism overrides for the authenticated app layout.
 
 .app-glass mat-toolbar,
 .app-glass .mat-toolbar {
-    background: hsla(var(--glass-bg));
+    background: hsl(0 0% 100% / 0.12);
     backdrop-filter: blur(18px) saturate(165%);
     -webkit-backdrop-filter: blur(18px) saturate(165%);
-    border-bottom: 1px solid hsla(var(--glass-border));
+    border-bottom: 1px solid hsl(0 0% 100% / 0.22);
     box-shadow: 0 12px 28px rgba(15, 23, 42, 0.25);
     color: hsl(var(--primary-foreground));
 }
@@ -38,10 +38,10 @@ Glassmorphism overrides for the authenticated app layout.
 }
 
 .app-glass #snav {
-    background: hsla(var(--glass-bg));
+    background: hsl(0 0% 100% / 0.11);
     backdrop-filter: blur(18px) saturate(165%);
     -webkit-backdrop-filter: blur(18px) saturate(165%);
-    border-right: 1px solid hsla(var(--glass-border));
+    border-right: 1px solid hsl(0 0% 100% / 0.2);
     box-shadow: 8px 0 24px rgba(15, 23, 42, 0.2);
 }
 
@@ -50,7 +50,7 @@ Glassmorphism overrides for the authenticated app layout.
 }
 
 .app-glass #snav .mat-list-item mat-icon {
-    color: hsl(var(--primary-foreground) / 0.6);
+    color: hsl(var(--primary-foreground) / 0.62);
 }
 
 .app-glass #snav .mat-list-item.selected > .mat-list-item-content > a {
@@ -63,60 +63,76 @@ Glassmorphism overrides for the authenticated app layout.
 }
 
 .app-glass .mat-card,
-.app-glass .ngx-datatable.material,
-.app-glass .mat-table,
+.app-glass mat-card,
 .app-glass .mat-paginator,
-.app-glass .mat-elevation-z8 {
-    background: hsla(var(--glass-bg));
+.app-glass .mat-elevation-z8,
+.app-glass .mat-table {
+    background: hsl(0 0% 100% / 0.12);
     backdrop-filter: blur(18px) saturate(165%);
     -webkit-backdrop-filter: blur(18px) saturate(165%);
-    border: 1px solid hsla(var(--glass-border));
+    border: 1px solid hsl(0 0% 100% / 0.2);
     box-shadow: 0 18px 40px rgba(15, 23, 42, 0.22) !important;
+    border-radius: var(--radius-card) !important;
 }
 
-.app-glass .ngx-datatable.material .datatable-header {
-    background: hsl(0 0% 100% / 0.2);
+.app-glass .page-card,
+.app-glass .page-card .mat-card-content,
+.app-glass .page-card .table-wrap {
+    border-radius: var(--radius-card);
 }
 
-.app-glass .ngx-datatable.material .datatable-header .datatable-header-cell {
-    color: hsl(var(--primary-foreground) / 0.8);
+.app-glass .page-header,
+.app-glass .page-title,
+.app-glass .page-subtitle {
+    color: hsl(var(--primary-foreground) / 0.95);
 }
 
-.app-glass .ngx-datatable.material .datatable-body-cell {
+.app-glass .page-subtitle {
+    color: hsl(var(--primary-foreground) / 0.72);
+}
+
+.app-glass .mat-flat-button,
+.app-glass .mat-raised-button,
+.app-glass .mat-stroked-button,
+.app-glass .mat-button-toggle,
+.app-glass .mat-chip {
+    border-radius: var(--radius-control) !important;
+}
+
+.app-glass .mat-flat-button,
+.app-glass .mat-raised-button,
+.app-glass .mat-stroked-button {
+    min-height: 40px;
+    padding-left: 16px;
+    padding-right: 16px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+
+.app-glass .mat-flat-button.mat-primary,
+.app-glass .mat-raised-button.mat-primary,
+.app-glass .mat-flat-button.search-btn,
+.app-glass .mat-raised-button.search-btn {
+    background: hsl(var(--primary)) !important;
+    color: hsl(var(--primary-foreground)) !important;
+}
+
+.app-glass .mat-flat-button.mat-warn,
+.app-glass .mat-raised-button.mat-warn,
+.app-glass .mat-flat-button.reset-btn,
+.app-glass .mat-raised-button.reset-btn {
+    background: hsl(337 88% 55%) !important;
+    color: hsl(var(--primary-foreground)) !important;
+}
+
+.app-glass .mat-stroked-button,
+.app-glass .mat-button {
+    border-color: hsl(0 0% 100% / 0.24);
     color: hsl(var(--primary-foreground) / 0.9);
 }
 
-.app-glass .ngx-datatable.material .datatable-body-row:hover {
-    background: hsl(0 0% 100% / 0.12);
-}
-
-.app-glass .mat-paginator {
-    border-top: 1px solid hsla(var(--glass-border));
-}
-
-.app-glass .mat-card,
-.app-glass .ngx-datatable.material,
-.app-glass .mat-table,
-.app-glass .mat-paginator {
-    color: hsl(var(--primary-foreground));
-}
-
-.app-glass .page-content h1,
-.app-glass .page-content h2,
-.app-glass .page-content h3,
-.app-glass .page-content h4,
-.app-glass .page-content h5,
-.app-glass .page-content h6 {
-    color: hsl(var(--primary-foreground));
-}
-
-.app-glass .page-content .mat-form-field-label,
-.app-glass .page-content .mat-input-element {
-    color: hsl(var(--foreground));
-}
-
 .app-glass .page-content .mat-form-field-label {
-    color: hsl(var(--muted-foreground) / 0.92);
+    color: hsl(var(--foreground) / 0.62);
 }
 
 .app-glass .page-content .mat-form-field.mat-focused .mat-form-field-label {
@@ -125,39 +141,85 @@ Glassmorphism overrides for the authenticated app layout.
 
 .app-glass .page-content .mat-input-element,
 .app-glass .page-content .mat-select-value-text,
-.app-glass .page-content .mat-select-arrow {
-    color: hsl(var(--foreground));
+.app-glass .page-content .mat-select-arrow,
+.app-glass .page-content .mat-datepicker-toggle {
+    color: hsl(var(--foreground) / 0.88);
 }
 
 .app-glass .page-content .mat-input-element::placeholder {
     color: hsl(var(--muted-foreground) / 0.72);
 }
 
+.app-glass .page-content .mat-form-field-appearance-outline .mat-form-field-outline,
+.app-glass .page-content .mat-form-field-appearance-outline .mat-form-field-outline-thick {
+    color: hsl(var(--foreground) / 0.24);
+}
+
+.app-glass .page-content .mat-form-field-appearance-outline.mat-focused .mat-form-field-outline-thick {
+    color: hsl(var(--primary));
+}
+
+.app-glass .page-content .mat-form-field-appearance-outline .mat-form-field-flex {
+    border-radius: var(--radius-control) !important;
+    background: hsl(0 0% 100% / 0.9);
+}
+
+.app-glass .table-shell .mat-header-row,
+.app-glass .mat-table .mat-header-row {
+    background: hsl(0 0% 100% / 0.9);
+}
+
+.app-glass .table-shell .mat-header-cell,
+.app-glass .mat-table .mat-header-cell {
+    color: hsl(var(--foreground) / 0.9);
+}
+
+.app-glass .table-shell .mat-row,
 .app-glass .mat-table .mat-row {
     transition: background 0.2s ease;
+    background: hsl(214 28% 84% / 0.26);
     border-bottom: 1px solid hsl(var(--foreground) / 0.12);
 }
 
-.app-glass .mat-table .mat-row:hover {
-    background: hsl(216 30% 84% / 0.32) !important;
+.app-glass .table-shell .mat-row:hover,
+.app-glass .mat-table .mat-row:hover,
+.app-glass .table-shell .mat-row.cdk-drag-preview,
+.app-glass .table-shell .mat-row.cdk-drag-placeholder {
+    background: var(--row-hover) !important;
 }
 
-.app-glass .mat-table .mat-header-row {
-    background: hsl(0 0% 100% / 0.88);
-}
-
-.app-glass .mat-table .mat-header-cell {
-    color: hsl(var(--foreground) / 0.88);
-}
-
+.app-glass .table-shell .mat-cell,
 .app-glass .mat-table .mat-cell {
-    color: hsl(var(--foreground) / 0.82);
+    color: hsl(var(--foreground) / 0.84);
+}
+
+.app-glass .mat-paginator {
+    border-top: 1px solid hsl(0 0% 100% / 0.2);
 }
 
 .app-glass .mat-paginator,
 .app-glass .mat-paginator .mat-select-value,
 .app-glass .mat-paginator .mat-select-arrow,
 .app-glass .mat-paginator .mat-paginator-page-size-label,
-.app-glass .mat-paginator .mat-paginator-range-label {
-    color: hsl(var(--foreground) / 0.82);
+.app-glass .mat-paginator .mat-paginator-range-label,
+.app-glass .mat-paginator .mat-icon-button {
+    color: hsl(var(--primary-foreground) / 0.86);
+}
+
+.app-glass .mat-paginator .mat-form-field-appearance-legacy .mat-form-field-flex,
+.app-glass .mat-paginator .mat-form-field-appearance-standard .mat-form-field-flex,
+.app-glass .mat-paginator .mat-form-field-appearance-outline .mat-form-field-flex {
+    background: hsl(0 0% 100% / 0.88);
+    border-radius: var(--radius-control);
+}
+
+.app-glass .ngx-datatable.material,
+.app-glass .ngx-datatable.material .datatable-header,
+.app-glass .ngx-datatable.material .datatable-body-row,
+.app-glass .ngx-datatable.material .datatable-body-cell {
+    color: hsl(var(--primary-foreground) / 0.9);
+}
+
+.app-glass .ngx-datatable.material .datatable-body-row:hover {
+    background: hsl(0 0% 100% / 0.12);
 }

@@ -1,18 +1,18 @@
-<mat-card>
-  <div class="header">
-    <div class="date-filter">
-      <mat-form-field appearance="outline" (click)="inTimeCalendar.open()">
-        <mat-label>From Date</mat-label>
-        <input #fromInput matInput [matDatepicker]="inTimeCalendar" [max]="toDay" [(ngModel)]="fromDate" readonly>
-        <mat-datepicker-toggle matSuffix [for]="inTimeCalendar"></mat-datepicker-toggle>
-        <mat-datepicker #inTimeCalendar></mat-datepicker>
-      </mat-form-field>
-      <mat-form-field appearance="outline" (click)="outTimeCalendar.open()">
-        <mat-label>To Date</mat-label>
-        <input #toInput matInput [matDatepicker]="outTimeCalendar" [min]="fromDate" [max]="toDay" [(ngModel)]="toDate" readonly>
-        <mat-datepicker-toggle matSuffix [for]="outTimeCalendar"></mat-datepicker-toggle>
-        <mat-datepicker #outTimeCalendar></mat-datepicker>
-      </mat-form-field>
+<mat-card class="page-card">
+  <div class="form-toolbar date-toolbar">
+    <mat-form-field appearance="outline" (click)="inTimeCalendar.open()">
+      <mat-label>From Date</mat-label>
+      <input #fromInput matInput [matDatepicker]="inTimeCalendar" [max]="toDay" [(ngModel)]="fromDate" readonly>
+      <mat-datepicker-toggle matSuffix [for]="inTimeCalendar"></mat-datepicker-toggle>
+      <mat-datepicker #inTimeCalendar></mat-datepicker>
+    </mat-form-field>
+    <mat-form-field appearance="outline" (click)="outTimeCalendar.open()">
+      <mat-label>To Date</mat-label>
+      <input #toInput matInput [matDatepicker]="outTimeCalendar" [min]="fromDate" [max]="toDay" [(ngModel)]="toDate" readonly>
+      <mat-datepicker-toggle matSuffix [for]="outTimeCalendar"></mat-datepicker-toggle>
+      <mat-datepicker #outTimeCalendar></mat-datepicker>
+    </mat-form-field>
+    <div class="toolbar-actions">
       <button class="search-btn" mat-flat-button color="warn" type="button" (click)="searchJobs()" [disabled]="!fromDate || !toDate">
         Search
       </button>
@@ -23,93 +23,95 @@
   </div>
 </mat-card>
 
-<mat-card>
-  <div class="board-toolbar">
-    <div class="board-toolbar__header">
-      <h5>Dispatch Board</h5>
+<mat-card class="page-card board-toolbar-card">
+  <div class="page-header board-toolbar__header">
+    <h5 class="page-title">Dispatch Board</h5>
+    <div class="page-actions">
       <button mat-flat-button color="primary" type="button" (click)="addJob()">
         Add Jobs
       </button>
     </div>
-    <div class="board-toolbar__controls">
-      <mat-form-field appearance="outline">
-        <mat-label>Depot Address (optional)</mat-label>
-        <input matInput [(ngModel)]="depotAddress" placeholder="Use GPS or default depot">
-      </mat-form-field>
-      <mat-form-field appearance="outline">
-        <mat-label>ETA per stop (min)</mat-label>
-        <input matInput type="number" [(ngModel)]="etaPerStopMinutes" min="5">
-      </mat-form-field>
-      <button mat-stroked-button color="primary" type="button" (click)="applyAiSuggestions()">
-        AI Suggest
-      </button>
-      <mat-chip-list *ngIf="orsStatus?.ors">
-        <mat-chip [color]="orsStatus.ors.enabled ? 'primary' : 'warn'" selected>
-          ORS: {{orsStatus.ors.enabled ? 'Enabled' : 'Disabled'}}
-        </mat-chip>
-      </mat-chip-list>
-      <mat-chip-list *ngIf="etaSource">
-        <mat-chip [color]="etaSource === 'ors-directions' ? 'primary' : 'warn'" selected>
-          ETA: {{etaSource === 'ors-directions' ? 'ORS' : 'Heuristic'}}
-        </mat-chip>
-      </mat-chip-list>
-      <button mat-stroked-button type="button" (click)="clearAssignments()">
-        Clear
-      </button>
-      <button mat-stroked-button color="warn" type="button" (click)="undoLastDispatch()">
-        Undo Last Dispatch
-      </button>
-      <button mat-raised-button color="accent" type="button" (click)="dispatchAll()">
-        Dispatch All
-      </button>
-    </div>
+  </div>
+  <div class="form-toolbar board-toolbar__controls">
+    <mat-form-field appearance="outline">
+      <mat-label>Depot Address (optional)</mat-label>
+      <input matInput [(ngModel)]="depotAddress" placeholder="Use GPS or default depot">
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>ETA per stop (min)</mat-label>
+      <input matInput type="number" [(ngModel)]="etaPerStopMinutes" min="5">
+    </mat-form-field>
+    <button mat-stroked-button color="primary" type="button" (click)="applyAiSuggestions()">
+      AI Suggest
+    </button>
+    <mat-chip-list *ngIf="orsStatus?.ors">
+      <mat-chip [color]="orsStatus.ors.enabled ? 'primary' : 'warn'" selected>
+        ORS: {{orsStatus.ors.enabled ? 'Enabled' : 'Disabled'}}
+      </mat-chip>
+    </mat-chip-list>
+    <mat-chip-list *ngIf="etaSource">
+      <mat-chip [color]="etaSource === 'ors-directions' ? 'primary' : 'warn'" selected>
+        ETA: {{etaSource === 'ors-directions' ? 'ORS' : 'Heuristic'}}
+      </mat-chip>
+    </mat-chip-list>
+    <button mat-stroked-button type="button" (click)="clearAssignments()">
+      Clear
+    </button>
+    <button mat-stroked-button color="warn" type="button" (click)="undoLastDispatch()">
+      Undo Last Dispatch
+    </button>
+    <button mat-raised-button color="accent" type="button" (click)="dispatchAll()">
+      Dispatch All
+    </button>
   </div>
 </mat-card>
 
-<div class="board" cdkDropListGroup>
-  <div class="column" *ngFor="let column of columns">
-    <div class="column-header">
-      <h6>{{column.title}}</h6>
-      <span class="count">{{column.jobs.length}} jobs</span>
-      <span class="driver-email" *ngIf="column.driverEmail">{{column.driverEmail}}</span>
-    </div>
-    <div class="column-body"
-         cdkDropList
-         [cdkDropListData]="column.jobs"
-         (cdkDropListDropped)="drop($event, column)">
-      <div class="job-card" *ngFor="let job of column.jobs; let i = index" cdkDrag>
-        <div class="job-top">
-          <span class="job-seq" *ngIf="column.id !== 'unassigned'">#{{i + 1}}</span>
-          <span class="job-invoice">DO {{job.invoiceNumber || job.inv_temp || job._id}}</span>
-          <span class="job-date">{{job.createdAt | date : 'dd-MM-yyyy' : 'UTC'}}</span>
+<mat-card class="page-card board-card">
+  <mat-card-content class="content-wrap board-content">
+    <div class="board" cdkDropListGroup>
+      <div class="column" *ngFor="let column of columns">
+        <div class="column-header">
+          <h6>{{column.title}}</h6>
+          <span class="count">{{column.jobs.length}} jobs</span>
+          <span class="driver-email" *ngIf="column.driverEmail">{{column.driverEmail}}</span>
         </div>
-        <div class="job-main">
-          <div class="job-customer">{{job.customer_firstName}} {{job.customer_lastName}}</div>
-          <div class="job-company">{{job.customer_companyName}}</div>
-          <div class="job-address">{{job.deliveryAddress || job.customer_deliveryAddress || job.customer_address}}</div>
-        </div>
-        <div class="job-meta" *ngIf="job.etaTime">
-          ETA {{job.etaTime | date : 'HH:mm'}} ({{job.etaMinutes}}m)
-        </div>
-        <div class="job-actions">
-          <button mat-icon-button (click)="editJob(job._id)">
-            <mat-icon>edit</mat-icon>
-          </button>
-          <button mat-icon-button color="warn" (click)="deleteJob(job._id)">
-            <mat-icon>delete</mat-icon>
-          </button>
+        <div class="column-body"
+            cdkDropList
+            [cdkDropListData]="column.jobs"
+            (cdkDropListDropped)="drop($event, column)">
+          <div class="job-card" *ngFor="let job of column.jobs; let i = index" cdkDrag>
+            <div class="job-top">
+              <span class="job-seq" *ngIf="column.id !== 'unassigned'">#{{i + 1}}</span>
+              <span class="job-invoice">DO {{job.invoiceNumber || job.inv_temp || job._id}}</span>
+              <span class="job-date">{{job.createdAt | date : 'dd-MM-yyyy' : 'UTC'}}</span>
+            </div>
+            <div class="job-main">
+              <div class="job-customer">{{job.customer_firstName}} {{job.customer_lastName}}</div>
+              <div class="job-company">{{job.customer_companyName}}</div>
+              <div class="job-address">{{job.deliveryAddress || job.customer_deliveryAddress || job.customer_address}}</div>
+            </div>
+            <div class="job-meta" *ngIf="job.etaTime">
+              ETA {{job.etaTime | date : 'HH:mm'}} ({{job.etaMinutes}}m)
+            </div>
+            <div class="job-actions">
+              <button mat-icon-button (click)="editJob(job._id)">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button mat-icon-button color="warn" (click)="deleteJob(job._id)">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
-  </div>
-</div>
 
-<div *ngIf="columns.length && totalJobsCount === 0" class="no-data">
-  <h2>No Jobs Are Available</h2>
-</div>
+    <div *ngIf="columns.length && totalJobsCount === 0" class="no-data">
+      <h2>No Jobs Are Available</h2>
+    </div>
+  </mat-card-content>
 
-<div>
   <mat-paginator [length]="length" [pageSize]="pageSize" [pageSizeOptions]="pageSizeOptions"
     aria-label="Select page" (page)="pageChange($event)">
   </mat-paginator>
-</div>
+</mat-card>

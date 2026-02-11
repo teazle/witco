@@ -72,7 +72,7 @@
     </div>
 </mat-card>
 <mat-card class="page-card">
-    <div class="table-wrap">
+    <div class="content-wrap toggle-wrap">
         <mat-button-toggle-group name="fontStyle" class="toggle" aria-label="Font Style" [value]="selectedVal" [(ngModel)]="selectedVal">
             <mat-button-toggle value="Delivering" (click)="deliveringOrder()">Delivering</mat-button-toggle>
             <mat-button-toggle value="Delivered" (click)="delivered()">Delivered</mat-button-toggle>
@@ -118,8 +118,8 @@
     </div>
 </mat-card>
 <mat-card class="page-card table-card">
-    <div class="table-wrap">
-    <table mat-table [dataSource]="dataSource" class="mat-elevation-z8" *ngIf="dataSource.data.length > 0  && selectedVal == 'Delivering'"> 
+    <div class="table-wrap table-scroll-safe">
+    <table mat-table [dataSource]="dataSource" class="table-shell" *ngIf="dataSource.data.length > 0  && selectedVal == 'Delivering'"> 
 
         <!-- Position Column -->
         <ng-container matColumnDef="srno">
@@ -134,7 +134,7 @@
 
         <ng-container matColumnDef="invoiceNumber" >
             <th mat-header-cell *matHeaderCellDef class="r-15"> DO Number </th>
-            <td mat-cell *matCellDef="let element" class="r-15"> {{element.invoiceNumber}} </td>
+            <td mat-cell *matCellDef="let element" class="r-15"> {{element.invoiceNumber || element.do_number}} </td>
         </ng-container>
 
         <ng-container matColumnDef="inv_temp" >
@@ -149,7 +149,7 @@
         
         <ng-container matColumnDef="deliveryAddress" >
             <th mat-header-cell *matHeaderCellDef class="r-30"> Delivery Address </th>
-            <td mat-cell *matCellDef="let element" class="r-30"> {{element.deliveryAddress || element.customer_deliveryAddress}} </td>
+            <td mat-cell *matCellDef="let element" class="r-30"> {{element.deliveryAddress || element.customer_deliveryAddress || element.customer_address}} </td>
         </ng-container>
 
         <ng-container matColumnDef="driver">
@@ -214,7 +214,7 @@
     
       </table>
 
-      <table mat-table [dataSource]="dataSource" class="mat-elevation-z8" *ngIf="dataSource.data.length > 0 && selectedVal == 'Delivered'"> 
+      <table mat-table [dataSource]="dataSource" class="table-shell" *ngIf="dataSource.data.length > 0 && selectedVal == 'Delivered'"> 
 
         <!-- Position Column -->
         <ng-container matColumnDef="srno">
@@ -238,7 +238,7 @@
 
         <ng-container matColumnDef="invoiceNumber" >
             <th mat-header-cell *matHeaderCellDef class="r-15"> DO Number </th>
-            <td mat-cell *matCellDef="let element" class="r-15"> {{element.invoiceNumber}} </td>
+            <td mat-cell *matCellDef="let element" class="r-15"> {{element.invoiceNumber || element.do_number}} </td>
         </ng-container>
 
         <ng-container matColumnDef="inv_temp" >
@@ -253,7 +253,7 @@
 
         <ng-container matColumnDef="deliveryAddress" >
             <th mat-header-cell *matHeaderCellDef class="r-30"> Delivery Address </th>
-            <td mat-cell *matCellDef="let element" class="r-30"> {{element.deliveryAddress || element.customer_deliveryAddress}} </td>
+            <td mat-cell *matCellDef="let element" class="r-30"> {{element.deliveryAddress || element.customer_deliveryAddress || element.customer_address}} </td>
         </ng-container>
 
         <ng-container matColumnDef="driver">

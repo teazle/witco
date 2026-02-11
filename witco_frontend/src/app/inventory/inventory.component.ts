@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { MatDialog } from '@angular/material';
@@ -11,7 +11,10 @@ import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.compone
   styleUrls: ['./inventory.component.css']
 })
 export class InventoryComponent implements OnInit {
-  displayedColumns: string[] = ['position', 'name', 'category', 'keywords', 'status', 'action'];
+  displayedColumnsDesktop: string[] = ['position', 'name', 'category', 'keywords', 'status', 'action'];
+  displayedColumnsTablet: string[] = ['position', 'name', 'category', 'status', 'action'];
+  displayedColumnsMobile: string[] = ['position', 'name', 'status', 'action'];
+  displayedColumns: string[] = [];
   dataSource: any = [];
   pageSizeOptions = [5, 10, 25, 50];
   pageSize = 10;
@@ -29,7 +32,26 @@ export class InventoryComponent implements OnInit {
   ) { }
 
   ngOnInit() {
+    this.updateDisplayedColumns();
     this.getInventory();
+  }
+
+  @HostListener('window:resize')
+  onWindowResize() {
+    this.updateDisplayedColumns();
+  }
+
+  updateDisplayedColumns() {
+    const width = window.innerWidth;
+    if (width >= 1366) {
+      this.displayedColumns = this.displayedColumnsDesktop;
+      return;
+    }
+    if (width >= 1100) {
+      this.displayedColumns = this.displayedColumnsTablet;
+      return;
+    }
+    this.displayedColumns = this.displayedColumnsMobile;
   }
 
   getInventory() {
