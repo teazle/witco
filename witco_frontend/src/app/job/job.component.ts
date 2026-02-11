@@ -3,8 +3,8 @@ import { FormArray, FormBuilder, FormControl, FormGroup, Validators } from '@ang
 import { AuthService } from '../services/auth.service';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
-import { forkJoin, fromEvent } from 'rxjs';
-import { debounceTime, distinctUntilChanged, tap } from 'rxjs/operators';
+import { forkJoin, fromEvent, Subject, of } from 'rxjs';
+import { debounceTime, distinctUntilChanged, tap, switchMap } from 'rxjs/operators';
 import { event, map } from 'jquery';
 
 @Component({
@@ -31,6 +31,9 @@ export class JobComponent implements OnInit,AfterViewInit {
   searchTerm: string = '';
   searchformdisplay:boolean=true;
   jobStatus:any
+  inventorySuggestions: any[] = [];
+  inventoryLoading = false;
+  private inventorySearch$ = new Subject<string>();
   documentFile: File | null = null;
   parseWarnings: string[] = [];
   isParsing = false;
@@ -95,6 +98,29 @@ export class JobComponent implements OnInit,AfterViewInit {
         this.addGoods();
       }
     })
+
+    this.inventorySearch$
+      .pipe(
+        debounceTime(250),
+        distinctUntilChanged(),
+        switchMap((term) => {
+          const query = (term || '').trim();
+          if (!query || query.length < 2) {
+            this.inventorySuggestions = [];
+            this.inventoryLoading = false;
+            return of({ data: [] });
+          }
+          this.inventoryLoading = true;
+          return this.authService.getData(`inventory/search?query=${encodeURIComponent(query)}&limit=20`);
+        })
+      )
+      .subscribe((res: any) => {
+        this.inventoryLoading = false;
+        this.inventorySuggestions = res && res.data ? res.data : [];
+      }, () => {
+        this.inventoryLoading = false;
+        this.inventorySuggestions = [];
+      });
   }
 
   ngAfterViewInit(): void {
@@ -133,6 +159,12 @@ export class JobComponent implements OnInit,AfterViewInit {
       // amount: ['']
     })
     this.goods.push(good);
+  }
+
+  onGoodsNameInput(index: number) {
+    const goodsControl = this.goods.at(index).get('goodsName');
+    const value = goodsControl ? (goodsControl.value || '') : '';
+    this.inventorySearch$.next(value);
   }
 
   onDocumentSelected(event: any) {
@@ -393,6 +425,7 @@ export class JobComponent implements OnInit,AfterViewInit {
         code:res.data.job.customer_phone.slice(0,3),
         phone:res.data.job.customer_phone.slice(3,),
         address: res.data.job.customer_address,
+        deliveryAddress: res.data.job.customer_deliveryAddress,
         userRole: 'customer'
       });
       this.authService.getData(`goods/get/${this.goods_id}`).subscribe((response: any) => {

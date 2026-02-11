@@ -4,22 +4,20 @@
 <div class="container">
   <!-- column -->
   <div>
-    <mat-card>
-      <div class="headerCard">
-         <div >
-          <h5 class="topLabel">All Drivers</h5>
-         </div>
-         <div>
-          <button mat-button mat-raised-button class="add" (click)="adduser()">
-            <mat-icon>add</mat-icon>
-            Add
-          </button>
-         </div>
+    <mat-card class="page-card">
+      <div class="page-header">
+          <h5 class="page-title">All Drivers</h5>
+          <div class="page-actions">
+            <button mat-raised-button color="primary" (click)="adduser()">
+              <mat-icon>add</mat-icon>
+              Add
+            </button>
+          </div>
       </div>
       
       
       <mat-card-content>
-        <div class='table-responsive mat-elevation-z8'>
+        <div class='table-wrap mat-elevation-z8'>
         <!-- Row -->
         <mat-table [dataSource]="dataSource">
         <!--- Note that these columns can be defined in any order.

@@ -1,0 +1,37 @@
+<mat-card class="page-card">
+  <div class="page-header">
+    <h5 class="page-title">{{title}}</h5>
+  </div>
+  <mat-card-content>
+    <form class="example-form" [formGroup]="inventoryForm" (ngSubmit)="onSubmit()">
+      <mat-card-content class="form-grid">
+        <mat-form-field class="example-full-width span-2">
+          <input matInput formControlName="name" placeholder="Item Name" autocomplete="off">
+        </mat-form-field>
+        <div class="field-error" *ngIf="inventoryForm.get('name').invalid && (inventoryForm.get('name').dirty || inventoryForm.get('name').touched)">
+          <mat-error *ngIf="inventoryForm.get('name').hasError('required')">
+            Item Name is Required!
+          </mat-error>
+        </div>
+
+        <mat-form-field class="example-full-width span-2">
+          <input matInput formControlName="category" placeholder="Category" autocomplete="off">
+        </mat-form-field>
+
+        <mat-form-field class="example-full-width span-2">
+          <input matInput formControlName="keywordsText" placeholder="Keywords (comma separated)" autocomplete="off">
+        </mat-form-field>
+
+        <mat-slide-toggle formControlName="isActive">Active</mat-slide-toggle>
+      </mat-card-content>
+      <div class="form-actions">
+        <div class="actions-left">
+          <button mat-stroked-button type="button" (click)="goBack()">Back</button>
+        </div>
+        <div class="actions-right">
+          <button mat-raised-button color="primary" type="submit" [disabled]="inventoryForm.invalid">Submit</button>
+        </div>
+      </div>
+    </form>
+  </mat-card-content>
+</mat-card>

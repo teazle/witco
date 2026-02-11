@@ -1,10 +1,12 @@
-<h1>{{title}}</h1>
 <div class="main">
-    <mat-card>
-        <mat-card-content>
+    <mat-card class="page-card">
+        <div class="page-header">
+            <h5 class="page-title">{{title}}</h5>
+        </div>
+        <mat-card-content class="content-wrap">
             <div class="wrapper">
                 <form class="example-form" [formGroup]="userForm" (ngSubmit)="onSubmit()">
-                    <mat-card-content>
+                    <div class="form-body">
                         <mat-form-field class="example-full-width">
                             <input matInput formControlName="firstName" placeholder="First Name" autocomplete="off">
                         </mat-form-field>
@@ -85,9 +87,11 @@
                         <mat-form-field class="example-full-width">
                             <input matInput formControlName="governmentIDs" placeholder="NRIC/FIN Number" type="text" max-length='20' autocomplete="off">
                         </mat-form-field>
-                    </mat-card-content>
+                    </div>
 
-                    <button mat-raised-button color="primary" [disabled]="userForm.invalid">Submit</button>
+                    <div class="form-actions">
+                        <button mat-raised-button color="primary" [disabled]="userForm.invalid">Submit</button>
+                    </div>
 
                 </form>
             </div> 

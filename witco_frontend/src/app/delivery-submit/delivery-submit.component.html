@@ -1,7 +1,9 @@
-<mat-card>
-    <mat-card-title> Delivery Details</mat-card-title>
-    <mat-card-content>
-        <h4>Customer Details</h4>
+<mat-card class="page-card">
+    <div class="page-header">
+        <h5 class="page-title">Delivery Details</h5>
+    </div>
+    <mat-card-content class="content-wrap">
+        <div class="section-heading">Customer Details</div>
         <mat-list>
             <mat-list-item>Name : {{jobDetails?.customer_firstName }}
                 &nbsp;{{jobDetails?.customer_lastName}}</mat-list-item>
@@ -17,8 +19,9 @@
         </mat-list>
     </mat-card-content>
 
-    <mat-card-content>
-        <h4>Goods Details</h4>
+    <mat-card-content class="content-wrap">
+        <div class="section-heading">Goods Details</div>
+        <div class="inner-table">
         <table mat-table [dataSource]="dataSource" class="mat-elevation-z8">
             <ng-container matColumnDef="sr">
                 <th mat-header-cell *matHeaderCellDef> No. </th>
@@ -48,6 +51,7 @@
             <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
             <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
         </table>
+        </div>
     </mat-card-content>
 
     <!-- <mat-card-content>
@@ -58,7 +62,7 @@
           </mat-radio-group>
     </mat-card-content> -->
 
-    <mat-card-content class="btn-group">
+    <mat-card-content class="content-wrap btn-group">
         
         <div class="proccess-btn-group"> 
             <button mat-raised-button color="primary" (click)="sign()" [ngClass]="!checksign  ? 'green' : '' ">sign <mat-icon *ngIf="!checksign">done</mat-icon></button>

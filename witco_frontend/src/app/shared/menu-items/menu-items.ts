@@ -44,6 +44,12 @@ const MENUITEMS = [
     icon: 'group'
   },
   {
+    state: 'inventory',
+    name: 'Inventory',
+    type: 'link',
+    icon: 'store'
+  },
+  {
     state: 'delivery-order',
     name: 'Jobs',
     type: 'link',

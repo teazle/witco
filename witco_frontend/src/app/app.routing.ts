@@ -65,6 +65,11 @@ export const AppRoutes: Routes = [
         loadChildren: './customer/customer.module#CustomerModule'
       },
       {
+        path: 'inventory',
+        canActivate: [RoleGuard],
+        loadChildren: './inventory/inventory.module#InventoryModule'
+      },
+      {
         path: 'delivery-order',
         canActivate: [RoleGuard],
         loadChildren: './delivery-order/delivery-order.module#DeliveryOrderModule'

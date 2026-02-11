@@ -1,12 +1,14 @@
-<mat-card>
-  <div class="add">
-    <h5 class="topLabel">All Customers</h5>
-    <button mat-button mat-raised-button (click)="addCustomer()">
-      <mat-icon>add</mat-icon>
-      Add
-    </button>
+<mat-card class="page-card">
+  <div class="page-header">
+    <h5 class="page-title">All Customers</h5>
+    <div class="page-actions">
+      <button mat-raised-button color="primary" (click)="addCustomer()">
+        <mat-icon>add</mat-icon>
+        Add
+      </button>
+    </div>
   </div>
-  <mat-card-content class="table"> 
+  <mat-card-content class="table-wrap"> 
 
     <table mat-table [dataSource]="dataSource" class="mat-elevation-z8">
 

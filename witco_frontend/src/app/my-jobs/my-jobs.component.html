@@ -1,4 +1,8 @@
-<mat-card>
+<mat-card class="page-card">
+    <div class="page-header">
+        <h5 class="page-title">My Jobs</h5>
+    </div>
+    <div class="table-wrap">
     <table mat-table [dataSource]="dataSource" class="mat-elevation-z8">
 
         <!-- Position Column -->
@@ -57,7 +61,8 @@
         <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
         <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
     </table>
-    <div *ngIf="!dataSource.data.length">
-        <h4 class="text-center">No Jobs Available</h4>
+        <div *ngIf="!dataSource.data.length">
+            <h4 class="text-center">No Jobs Available</h4>
+        </div>
     </div>
 </mat-card>

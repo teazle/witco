@@ -1,5 +1,8 @@
-<mat-card >
-    <div class="header">
+<mat-card class="page-card">
+    <div class="page-header">
+        <h5 class="page-title">Delivery Orders</h5>
+    </div>
+    <div class="form-toolbar">
         <mat-form-field appearance="outline">
             <mat-label>DO Number</mat-label>
             <input
@@ -45,36 +48,39 @@
             <mat-datepicker-toggle matSuffix [for]="outTimeCalendar"></mat-datepicker-toggle>
             <mat-datepicker #outTimeCalendar></mat-datepicker>
         </mat-form-field>  
-        
-        <button
-            class="search-btn"
-            mat-flat-button
-            color="warn"
-            type="button"
-            (click)="searchJobs()"
-            [disabled]="isSearchDisabled()"
-        >
-        Search
-        </button>
-        <button
-            class="reset-btn"
-            mat-flat-button
-            color="warn"
-            type="button"
-            (click)="resetFilters()"
-        >
-        Reset
-        </button>
-</div>
+        <div class="toolbar-actions">
+            <button
+                class="search-btn"
+                mat-flat-button
+                color="warn"
+                type="button"
+                (click)="searchJobs()"
+                [disabled]="isSearchDisabled()"
+            >
+            Search
+            </button>
+            <button
+                class="reset-btn"
+                mat-flat-button
+                color="warn"
+                type="button"
+                (click)="resetFilters()"
+            >
+            Reset
+            </button>
+        </div>
+    </div>
 </mat-card>
-<mat-card>
-    <mat-button-toggle-group name="fontStyle" class="toggle" aria-label="Font Style" [value]="selectedVal" [(ngModel)]="selectedVal">
-        <mat-button-toggle value="Delivering" (click)="deliveringOrder()">Delivering</mat-button-toggle>
-        <mat-button-toggle value="Delivered" (click)="delivered()">Delivered</mat-button-toggle>
-    </mat-button-toggle-group>
+<mat-card class="page-card">
+    <div class="table-wrap">
+        <mat-button-toggle-group name="fontStyle" class="toggle" aria-label="Font Style" [value]="selectedVal" [(ngModel)]="selectedVal">
+            <mat-button-toggle value="Delivering" (click)="deliveringOrder()">Delivering</mat-button-toggle>
+            <mat-button-toggle value="Delivered" (click)="delivered()">Delivered</mat-button-toggle>
+        </mat-button-toggle-group>
+    </div>
 </mat-card>
-<mat-card class="sort-bar">
-    <div class="header">
+<mat-card class="page-card sort-bar">
+    <div class="form-toolbar">
         <mat-form-field appearance="outline">
             <mat-label>Sort By</mat-label>
             <mat-select [(ngModel)]="sortField" (selectionChange)="searchJobs()">
@@ -98,18 +104,21 @@
             <mat-label>Search Value</mat-label>
             <input matInput [(ngModel)]="searchValue" placeholder="Search">
         </mat-form-field>
-        <button
-            class="search-btn"
-            mat-flat-button
-            color="warn"
-            type="button"
-            (click)="searchJobs()"
-        >
-        Apply
-        </button>
+        <div class="toolbar-actions">
+            <button
+                class="search-btn"
+                mat-flat-button
+                color="warn"
+                type="button"
+                (click)="searchJobs()"
+            >
+            Apply
+            </button>
+        </div>
     </div>
 </mat-card>
-<mat-card class="table">
+<mat-card class="page-card table-card">
+    <div class="table-wrap">
     <table mat-table [dataSource]="dataSource" class="mat-elevation-z8" *ngIf="dataSource.data.length > 0  && selectedVal == 'Delivering'"> 
 
         <!-- Position Column -->
@@ -302,15 +311,16 @@
         <tr mat-row *matRowDef="let row; columns: displayedColumnsDelivered;"></tr>
     
       </table>
-      <div class="no-data">
-        <h2  class="text-center" *ngIf="dataSource.data.length < 1">No Data Available</h2>
-      </div>
-      <mat-paginator [length]="length"
-              [pageSize]="pageSize"
-              [pageSizeOptions]="pageSizeOptions"
-              [pageIndex]="currentPage"
-              aria-label="Select page"
-              (page)="handlePageEvent($event)"
-              >
-</mat-paginator>
+        <div class="no-data">
+            <h2  class="text-center" *ngIf="dataSource.data.length < 1">No Data Available</h2>
+        </div>
+        <mat-paginator [length]="length"
+                [pageSize]="pageSize"
+                [pageSizeOptions]="pageSizeOptions"
+                [pageIndex]="currentPage"
+                aria-label="Select page"
+                (page)="handlePageEvent($event)"
+                >
+        </mat-paginator>
+    </div>
 </mat-card>

@@ -7,7 +7,7 @@
 .dash-hero {
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
+  align-items: center;
   gap: 16px;
   flex-wrap: wrap;
 }
@@ -31,6 +31,12 @@
   font-size: 14px;
   color: #5b6474;
   max-width: 520px;
+}
+
+.dash-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .dash-panel {

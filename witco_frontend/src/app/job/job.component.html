@@ -96,9 +96,15 @@
                             <mat-icon class="search-icon" color="primary">search</mat-icon>
                         </div>
                         <mat-list role="list" *ngIf="filteredItems.length != 0" class="search-list">
-                            <mat-list-item role="listitem" *ngFor="let item of filteredItems" (click)="setForm(item)">{{
-                                item.firstName }}
-                                {{item.lastName}} {{item.companyName}}
+                            <mat-list-item role="listitem" *ngFor="let item of filteredItems" (click)="setForm(item)">
+                                <div class="search-result">
+                                    <div class="search-result__title">
+                                        {{ item.firstName }} {{ item.lastName }} {{ item.companyName }}
+                                    </div>
+                                    <div class="search-result__meta" *ngIf="item.deliveryAddress || item.address">
+                                        {{ item.deliveryAddress || item.address }}
+                                    </div>
+                                </div>
                             </mat-list-item>
                         </mat-list>
                     </div>
@@ -245,8 +251,23 @@
                                 <div [formGroupName]="i" class="goods-box">
                                     <mat-form-field class="example-full-width good-fild-1">
                                         <input matInput formControlName="goodsName" placeholder="Goods Name"
-                                            autocomplete="off">
+                                            autocomplete="off" [matAutocomplete]="inventoryAuto"
+                                            (input)="onGoodsNameInput(i)">
                                     </mat-form-field>
+                                    <mat-autocomplete #inventoryAuto="matAutocomplete">
+                                        <mat-option *ngFor="let option of inventorySuggestions" [value]="option.name">
+                                            <span>{{option.name}}</span>
+                                            <span class="inventory-option-meta" *ngIf="option.category">
+                                                ({{option.category}})
+                                            </span>
+                                        </mat-option>
+                                        <mat-option *ngIf="inventoryLoading" disabled>
+                                            Loading...
+                                        </mat-option>
+                                        <mat-option *ngIf="!inventoryLoading && inventorySuggestions.length === 0 && (good.get('goodsName').value || '').length >= 2" disabled>
+                                            No matches
+                                        </mat-option>
+                                    </mat-autocomplete>
 
                                     <mat-form-field class="example-full-width good-fild-2">
 

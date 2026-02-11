@@ -1,7 +1,7 @@
 <!-- ============================================================== -->
 <!-- Main wrapper - style you can find in pages.scss -->
 <!-- ============================================================== -->
-<div *ngIf="userDetails.userRole == 'admin'" class="main-container" [dir]="dir"
+<div *ngIf="userDetails.userRole == 'admin'" class="main-container app-glass" [dir]="dir"
     [ngClass]="{'minisidebar': minisidebar, 'boxed': boxed, 'danger': danger, 'blue': blue, 'green': green, 'dark': dark }">
 
     <mat-toolbar class="topbar telative green">
@@ -83,7 +83,7 @@
 
 
 
-<div *ngIf="userDetails.userRole == 'driver'" class="main-container" [dir]="dir"
+<div *ngIf="userDetails.userRole == 'driver'" class="main-container app-glass" [dir]="dir"
     [ngClass]="{'minisidebar': minisidebar, 'boxed': boxed, 'danger': danger, 'blue': blue, 'green': green, 'dark': dark }">
     <mat-toolbar class="topbar telative green">
         <div class="navbar-header">

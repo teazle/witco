@@ -1,6 +1,8 @@
-<mat-card>
-  <mat-card-title class="profiletitle"> Profile</mat-card-title>
-    <mat-card-content>
+<mat-card class="page-card">
+  <div class="page-header">
+    <h5 class="page-title">Profile</h5>
+  </div>
+    <mat-card-content class="content-wrap">
       <form [formGroup]="profileForm" (ngSubmit)="updateData(profileForm.value)" autocomplete="off">
         <div fxLayout="column" fxLayoutGap="10px">
           <div fxLayout="row" fxLayoutAlign="space-between center" *ngIf="userDetails.userRole ==  'admin'">
@@ -74,17 +76,14 @@
         </button> -->
       </form>
     </mat-card-content>
-    <div *ngIf="userDetails.userRole ==  'driver'" class="driver-btn">
-      <div>
-        <button mat-raised-button (click)="Logout()">Logout
-          <mat-icon class="material-icons color_blue d_bottom_bar" 
-          color="primary"
-          >
-          exit_to_app
-        </mat-icon>
-      </button>
-    </div>
-    <div>
+    <div *ngIf="userDetails.userRole ==  'driver'" class="page-footer">
+      <button mat-raised-button (click)="Logout()">Logout
+        <mat-icon class="material-icons color_blue d_bottom_bar" 
+        color="primary"
+        >
+        exit_to_app
+      </mat-icon>
+    </button>
       <button  mat-raised-button (click)="forgetPassword()">Reset
         <mat-icon class="material-icons color_blue d_bottom_bar"   
         color="primary"
@@ -92,6 +91,5 @@
         lock_open
       </mat-icon>
     </button>
-    </div>
     </div>
   </mat-card>

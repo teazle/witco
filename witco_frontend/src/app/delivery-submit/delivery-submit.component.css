@@ -2,9 +2,6 @@ mat-card{
     max-height: calc(100% - 128px)!important;
     overflow: auto;
 }
-mat-card mat-card-content{
-    padding: 0!important;
-}
 .address{
   height: 104px!important;
   overflow: auto;
@@ -12,45 +9,47 @@ mat-card mat-card-content{
 table {
     width: 100%;
 }
-mat-card-title{
-    font-size: 20px;
-    font-weight: 700;
-    padding: 12px 6px;
+.inner-table{
+    overflow-x: auto;
 }
-h4{
+.section-heading{
     font-size: 20px;
     font-weight: 600;
-    padding: 12px 6px;
-    border-bottom: 1px solid #999;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e3e6ef;
+    margin-bottom: 12px;
 }
 
 .btn-group{
-    margin-top: 32px!important;
-    padding: 12px;
-    border: 1px dashed #999;
+    margin-top: 20px!important;
+    border: 1px dashed #c7cbd8;
+    border-radius: 12px;
 }
 
 .proccess-btn-group{
     display: flex;
-    justify-content: space-around;
+    justify-content: space-between;
     align-items: center;
-    padding: 18px 8px;
+    padding: 12px 0;
     gap: 12px;
+    flex-wrap: wrap;
 }
 
 .proccess-btn-group button{
-    width: 100%;
+    flex: 1;
+    min-width: 140px;
 }
 
 .submit-btn{
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 12px;
+    padding-top: 8px;
 }
 
 .submit-btn button{
     width: 100%;
+    max-width: 280px;
 }
 
 .green{

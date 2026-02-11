@@ -25,13 +25,13 @@
 
 <mat-card>
   <div class="board-toolbar">
-    <div class="left">
+    <div class="board-toolbar__header">
       <h5>Dispatch Board</h5>
       <button mat-flat-button color="primary" type="button" (click)="addJob()">
         Add Jobs
       </button>
     </div>
-    <div class="right">
+    <div class="board-toolbar__controls">
       <mat-form-field appearance="outline">
         <mat-label>Depot Address (optional)</mat-label>
         <input matInput [(ngModel)]="depotAddress" placeholder="Use GPS or default depot">

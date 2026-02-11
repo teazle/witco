@@ -437,13 +437,13 @@ exports.getAllJob = catchAsync(async (req, res, next) => {
   var pageSize = parseInt(req.query.pagesize) || 5;
   var page = parseInt(req.query.page) || 1;
   let type = req.query.type === 'ASCE' ? 1 : -1;
-  let field = req.query.field 
-  let where = {};
+  let field = req.query.field;
   const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const searchField = req.query.searchField;
   const searchValueRaw = req.query.searchValue;
   const allowedSearchFields = new Set([
     "invoiceNumber",
+    "do_number",
     "inv_temp",
     "invoice_no",
     "customer_companyName",
@@ -453,62 +453,79 @@ exports.getAllJob = catchAsync(async (req, res, next) => {
     "driver_lastName",
     "driver_email",
     "deliveryAddress",
+    "customer_deliveryAddress",
+    "customer_address",
   ]);
-
-  let sort ;
-  if (field &&  field !== 'None') { sort = {}; sort[field]=type;}
-  else{type= -1;}
-
   let queryStatus = req.query.status;
+  const andFilters = [];
   if (queryStatus) {
-    where.status = queryStatus;
+    andFilters.push({ status: queryStatus });
   }
-  if (queryStatus==='Delivered') {
-    where.status = queryStatus;
-    if(!sort) {
-        sort = {
-        delivery_time : -1
-      }
-      if(!field)field = 'delivery_time'
-    }
+  const driverEmail =
+    req.user.userRole === 'driver' ? req.user.email : req.query.driver_email;
+  if (driverEmail) {
+    andFilters.push({ driver_email: driverEmail });
   }
-  if (!sort) {
-    sort = {
-      updatedAt: -1
-    }
-    if(!field)field = 'updatedAt'
-  }
-  if (req.query.driver_email) {
-    where.driver_email = req.query.driver_email;
+  if (req.user.userRole === 'driver') {
+    pageSize = 100;
   }
   if (req.query.invoiceNumber) {
-    where.invoiceNumber = req.query.invoiceNumber;
+    const invoiceNumber = req.query.invoiceNumber;
+    andFilters.push({
+      $or: [{ invoiceNumber }, { do_number: invoiceNumber }],
+    });
   }
   if (searchField && searchValueRaw && allowedSearchFields.has(searchField)) {
     const searchValue = String(searchValueRaw).trim();
     if (searchValue.length) {
-      where[searchField] = { $regex: new RegExp(escapeRegex(searchValue), "i") };
+      const regex = { $regex: new RegExp(escapeRegex(searchValue), "i") };
+      if (searchField === "deliveryAddress") {
+        andFilters.push({
+          $or: [
+            { deliveryAddress: regex },
+            { customer_deliveryAddress: regex },
+            { customer_address: regex },
+          ],
+        });
+      } else if (searchField === "invoiceNumber") {
+        andFilters.push({
+          $or: [{ invoiceNumber: regex }, { do_number: regex }],
+        });
+      } else {
+        andFilters.push({ [searchField]: regex });
+      }
     }
   }
   if (req.query.fromDate && req.query.toDate) {
     const fromDate = new Date(req.query.fromDate);
     const toDate = new Date(req.query.toDate);
     if (!isNaN(fromDate.getTime()) && !isNaN(toDate.getTime())) {
-      const startDate = new Date(Date.UTC(fromDate.getUTCFullYear(), fromDate.getUTCMonth(), fromDate.getUTCDate() - 1, 16, 0));
-      const endDate = new Date(Date.UTC(toDate.getUTCFullYear(), toDate.getUTCMonth(), toDate.getUTCDate(), 16, 0));
-      if (where.status !== 'Delivered') {
-        where.updatedAt = { $gte: startDate, $lte: endDate };
-      } else {
-        where.delivery_time = { $gte: startDate, $lte: endDate };
-      }
+      const startDate = new Date(
+        Date.UTC(fromDate.getUTCFullYear(), fromDate.getUTCMonth(), fromDate.getUTCDate() - 1, 16, 0)
+      );
+      const endDate = new Date(
+        Date.UTC(toDate.getUTCFullYear(), toDate.getUTCMonth(), toDate.getUTCDate(), 16, 0)
+      );
+      const dateField = queryStatus === "Delivered" ? "delivery_time" : "updatedAt";
+      andFilters.push({ [dateField]: { $gte: startDate, $lte: endDate } });
     }
   }
-
-
-  if(req.user.userRole=='driver'){
-    where.driver_email = req.user.email;
-    pageSize=100;
+  const where = andFilters.length ? { $and: andFilters } : {};
+  if (!field || field === "None") {
+    field = queryStatus === "Delivered" ? "delivery_time" : "updatedAt";
+    type = -1;
   }
+  const sortFieldExprMap = {
+    invoiceNumber: { $ifNull: ["$invoiceNumber", "$do_number"] },
+    deliveryAddress: {
+      $ifNull: ["$deliveryAddress", { $ifNull: ["$customer_deliveryAddress", "$customer_address"] }],
+    },
+    customer_deliveryAddress: {
+      $ifNull: ["$customer_deliveryAddress", { $ifNull: ["$deliveryAddress", "$customer_address"] }],
+    },
+    inv_temp: { $ifNull: ["$inv_temp", ""] },
+  };
+  const sortFieldExpr = sortFieldExprMap[field] || `$${field}`;
 
   const joball = await Job.aggregate( [
   {
@@ -534,7 +551,7 @@ exports.getAllJob = catchAsync(async (req, res, next) => {
 {
   $replaceRoot: { newRoot: { $mergeObjects: [ { $arrayElemAt: [ "$goods" , 0 ] }, "$$ROOT" ] }}
 },{
-  $set:{field:`$${field}`}
+  $set:{field: sortFieldExpr}
 },
 {
   $addFields: {

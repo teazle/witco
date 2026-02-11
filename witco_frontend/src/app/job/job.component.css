@@ -87,6 +87,12 @@
     overflow: hidden;
 }
 
+.inventory-option-meta {
+    margin-left: 6px;
+    color: var(--job-muted);
+    font-size: 12px;
+}
+
 .upload-panel {
     padding: 20px 24px 8px 24px;
     border-bottom: 1px solid var(--job-border);
@@ -344,13 +350,30 @@ mat-list {
     border: 1px solid var(--job-border);
 }
 
-mat-list-item {
+.search-list mat-list-item {
     width: 100%;
     cursor: pointer;
     margin-bottom: 0;
-    height: 38px !important;
+    height: auto !important;
     font-size: 13px !important;
     border-bottom: 1px solid hsl(214 32% 94%);
+}
+
+.search-result {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px 0;
+}
+
+.search-result__title {
+    color: var(--job-text);
+    font-weight: 600;
+}
+
+.search-result__meta {
+    color: var(--job-muted);
+    font-size: 12px;
 }
 
 .search-input-box {
