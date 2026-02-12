@@ -37,6 +37,16 @@ Glassmorphism overrides for the authenticated app layout.
     color: hsl(var(--primary-foreground));
 }
 
+/* Keep topbar action icons visible against the white toolbar background. */
+.app-glass mat-toolbar.topbar,
+.app-glass .mat-toolbar.topbar,
+.app-glass mat-toolbar.topbar .mat-icon-button,
+.app-glass .mat-toolbar.topbar .mat-icon-button,
+.app-glass mat-toolbar.topbar .mat-icon-button .mat-icon,
+.app-glass .mat-toolbar.topbar .mat-icon-button .mat-icon {
+    color: hsl(var(--foreground));
+}
+
 .app-glass #snav {
     background: hsl(0 0% 100% / 0.11);
     backdrop-filter: blur(18px) saturate(165%);
@@ -166,35 +176,57 @@ Glassmorphism overrides for the authenticated app layout.
 
 .app-glass .table-shell .mat-header-row,
 .app-glass .mat-table .mat-header-row {
-    background: hsl(0 0% 100% / 0.9);
+    background: hsl(0 0% 98% / 0.98);
+    border-bottom: 1px solid hsl(var(--border) / 0.9);
 }
 
 .app-glass .table-shell .mat-header-cell,
 .app-glass .mat-table .mat-header-cell {
-    color: hsl(var(--foreground) / 0.9);
+    color: hsl(var(--foreground) / 0.96);
 }
 
 .app-glass .table-shell .mat-row,
 .app-glass .mat-table .mat-row {
     transition: background 0.2s ease;
-    background: hsl(214 28% 84% / 0.26);
-    border-bottom: 1px solid hsl(var(--foreground) / 0.12);
+    background: hsl(0 0% 100% / 0.96);
+    border-bottom: 1px solid hsl(var(--border) / 0.92);
+}
+
+.app-glass .table-shell .mat-row:nth-child(even),
+.app-glass .mat-table .mat-row:nth-child(even) {
+    background: hsl(220 40% 98% / 0.96);
 }
 
 .app-glass .table-shell .mat-row:hover,
 .app-glass .mat-table .mat-row:hover,
 .app-glass .table-shell .mat-row.cdk-drag-preview,
 .app-glass .table-shell .mat-row.cdk-drag-placeholder {
-    background: var(--row-hover) !important;
+    background: hsl(var(--primary) / 0.08) !important;
 }
 
 .app-glass .table-shell .mat-cell,
 .app-glass .mat-table .mat-cell {
-    color: hsl(var(--foreground) / 0.84);
+    color: hsl(var(--foreground) / 0.9);
+}
+
+.app-glass .table-shell .mat-cell .mat-icon,
+.app-glass .mat-table .mat-cell .mat-icon {
+    color: hsl(var(--foreground) / 0.78);
+}
+
+.app-glass .table-shell .mat-cell .mat-icon.mat-primary,
+.app-glass .mat-table .mat-cell .mat-icon.mat-primary {
+    color: hsl(var(--primary) / 0.92);
+}
+
+.app-glass .table-shell .mat-cell .mat-icon.mat-warn,
+.app-glass .mat-table .mat-cell .mat-icon.mat-warn {
+    color: hsl(337 88% 50%);
 }
 
 .app-glass .mat-paginator {
-    border-top: 1px solid hsl(0 0% 100% / 0.2);
+    border-top: 1px solid hsl(var(--border) / 0.85);
+    background: hsl(0 0% 100% / 0.95);
 }
 
 .app-glass .mat-paginator,
@@ -203,7 +235,7 @@ Glassmorphism overrides for the authenticated app layout.
 .app-glass .mat-paginator .mat-paginator-page-size-label,
 .app-glass .mat-paginator .mat-paginator-range-label,
 .app-glass .mat-paginator .mat-icon-button {
-    color: hsl(var(--primary-foreground) / 0.86);
+    color: hsl(var(--foreground) / 0.88);
 }
 
 .app-glass .mat-paginator .mat-form-field-appearance-legacy .mat-form-field-flex,
@@ -217,9 +249,9 @@ Glassmorphism overrides for the authenticated app layout.
 .app-glass .ngx-datatable.material .datatable-header,
 .app-glass .ngx-datatable.material .datatable-body-row,
 .app-glass .ngx-datatable.material .datatable-body-cell {
-    color: hsl(var(--primary-foreground) / 0.9);
+    color: hsl(var(--foreground) / 0.9);
 }
 
 .app-glass .ngx-datatable.material .datatable-body-row:hover {
-    background: hsl(0 0% 100% / 0.12);
+    background: hsl(var(--primary) / 0.08);
 }

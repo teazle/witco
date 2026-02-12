@@ -33,6 +33,7 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 15 * 1024 * 1024 },
 });
+const MIN_EXTRACTABLE_TEXT_LENGTH = 20;
 
 const ZIP_SG = /\b\d{6}\b/;
 const ZIP_US = /\b\d{5}\b/;
@@ -1198,15 +1199,17 @@ exports.parseDocument = [
     }
 
     let text = "";
+    const parsingWarnings = [];
     if (isPdf) {
       const parsed = await pdfParse(req.file.buffer);
       text = parsed.text || "";
+      if (normalizeText(text).length < MIN_EXTRACTABLE_TEXT_LENGTH) {
+        parsingWarnings.push("pdf_text_not_extractable");
+        parsingWarnings.push("upload_image_for_ocr");
+      }
     } else if (isImage) {
-      const worker = await createWorker({ logger: () => {} });
+      const worker = await createWorker("eng");
       try {
-        await worker.load();
-        await worker.loadLanguage("eng");
-        await worker.initialize("eng");
         const result = await worker.recognize(req.file.buffer);
         text = (result && result.data && result.data.text) || "";
       } finally {
@@ -1215,6 +1218,9 @@ exports.parseDocument = [
     }
 
     const parsed = parseDocumentText(text);
+    parsed.warnings = Array.from(
+      new Set([...(parsed.warnings || []), ...parsingWarnings])
+    );
     res.status(200).json({
       status: "success",
       data: parsed,
