@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { AuthService } from './services/auth.service';
+import { Observable } from 'rxjs';
 
 @Component({
   selector: 'app-root',
@@ -7,14 +8,9 @@ import { AuthService } from './services/auth.service';
   styleUrls: ['./app.component.css']
 })
 export class AppComponent {
-
-  loader: boolean = false;
+  loader$: Observable<boolean>;
 
   constructor(private authService: AuthService) {
-   this.authService.getLoader().subscribe(value => {
-      setTimeout(() => {
-        this.loader = value;
-      }, 100);
-    });
+    this.loader$ = this.authService.getLoader();
   }
 }

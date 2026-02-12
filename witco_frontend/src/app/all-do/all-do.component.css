@@ -20,12 +20,18 @@
 }
 
 .search-btn {
-    background-color: #41419e;
+    background-color: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+}
+
+.reset-btn {
+    background-color: hsl(var(--danger));
+    color: hsl(var(--danger-foreground));
 }
 
 .mat-button-toggle-checked {
-    background-color: #41419e !important;
-    color: #ffffff;
+    background-color: hsl(var(--primary)) !important;
+    color: #fff;
 }
 
 .action {
@@ -40,7 +46,7 @@ mat-button-toggle-group {
 }
 
 mat-form-field.invoice {
-    width: 150px;
+    width: 160px;
     margin-right: 12px;
 }
 
@@ -80,12 +86,12 @@ mat-icon {
 
 .unpaid {
     text-align: center;
-    color: red;
+    color: #c62828;
 }
 
 .paid {
     text-align: center;
-    color: green;
+    color: #2e7d32;
 }
 
 .table-shell {
@@ -134,5 +140,20 @@ mat-icon {
 
     .r-10 {
         min-width: 106px;
+    }
+}
+
+@media only screen and (max-width: 767px) {
+    .table-shell {
+        min-width: 1180px;
+    }
+
+    mat-form-field.invoice {
+        width: 136px;
+        margin-right: 6px;
+    }
+
+    .toggle-wrap {
+        justify-content: flex-start;
     }
 }

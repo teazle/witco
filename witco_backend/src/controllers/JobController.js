@@ -10,7 +10,9 @@ const authToken = process.env.TWILIO_AUTH_TOKEN;
 const Email = require("../utils/email");
 const client = accountSid && authToken ? require("twilio")(accountSid, authToken) : null;
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
+const { spawn, spawnSync } = require("child_process");
 const createPDFFromImages = require("../utils/pdfgenerator");
 const createInvoicePdf = require("../utils/invoicePdf");
 const { blobPut, isBlobEnabled } = require("../utils/blob");
@@ -34,10 +36,30 @@ const upload = multer({
   limits: { fileSize: 15 * 1024 * 1024 },
 });
 const MIN_EXTRACTABLE_TEXT_LENGTH = 20;
+const OCR_TIMEOUT_MS = 45 * 1000;
+const BINARY_CHECK_CACHE = new Map();
+const IDENTIFIER_TOKEN_STOPLIST = new Set([
+  "NO",
+  "NUMBER",
+  "INVOICE",
+  "PO",
+  "DO",
+  "DATE",
+  "REF",
+  "FORMAT",
+  "FORM",
+  "PAGE",
+  "TOTAL",
+  "N",
+  "NA",
+  "N/A",
+]);
 
 const ZIP_SG = /\b\d{6}\b/;
 const ZIP_US = /\b\d{5}\b/;
 const NON_EMPTY_LINE = /\S+/;
+const GOODS_STOP_WORDS =
+  /\b(subtotal|total|grand total|gst|tax|payment|remark|delivery\s*date)\b/i;
 
 function extractZip(value) {
   if (!value) return "";
@@ -53,6 +75,124 @@ function normalizeText(text) {
     .replace(/\r/g, "\n")
     .replace(/\n{2,}/g, "\n")
     .trim();
+}
+
+function hasBinary(name) {
+  if (BINARY_CHECK_CACHE.has(name)) return BINARY_CHECK_CACHE.get(name);
+  const check = spawnSync("which", [name], { stdio: "ignore" });
+  const available = check.status === 0;
+  BINARY_CHECK_CACHE.set(name, available);
+  return available;
+}
+
+function runCommand(command, args, options = {}) {
+  return new Promise((resolve) => {
+    const child = spawn(command, args, {
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    const stdoutChunks = [];
+    const stderrChunks = [];
+    let timedOut = false;
+    let settled = false;
+
+    const timer =
+      options.timeoutMs && options.timeoutMs > 0
+        ? setTimeout(() => {
+            timedOut = true;
+            child.kill("SIGKILL");
+          }, options.timeoutMs)
+        : null;
+
+    const done = (result) => {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      resolve(result);
+    };
+
+    child.stdout.on("data", (chunk) => stdoutChunks.push(chunk));
+    child.stderr.on("data", (chunk) => stderrChunks.push(chunk));
+
+    child.on("error", (error) => {
+      done({
+        code: -1,
+        stdout: Buffer.alloc(0),
+        stderr: Buffer.from(String(error && error.message ? error.message : error)),
+        timedOut,
+      });
+    });
+
+    child.on("close", (code) => {
+      done({
+        code: Number.isInteger(code) ? code : -1,
+        stdout: Buffer.concat(stdoutChunks),
+        stderr: Buffer.concat(stderrChunks),
+        timedOut,
+      });
+    });
+
+    if (options.input) {
+      child.stdin.end(options.input);
+      return;
+    }
+    child.stdin.end();
+  });
+}
+
+async function extractTextFromPdfOcr(pdfBuffer) {
+  const warnings = [];
+  if (!hasBinary("magick") || !hasBinary("tesseract")) {
+    warnings.push("pdf_ocr_dependencies_missing");
+    return { text: "", warnings };
+  }
+
+  const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "witco-po-"));
+  const pdfPath = path.join(tempDir, "upload.pdf");
+
+  try {
+    await fs.promises.writeFile(pdfPath, pdfBuffer);
+
+    const image = await runCommand(
+      "magick",
+      [
+        `${pdfPath}[0]`,
+        "-density",
+        "300",
+        "-background",
+        "white",
+        "-alpha",
+        "remove",
+        "-alpha",
+        "off",
+        "-colorspace",
+        "Gray",
+        "png:-",
+      ],
+      { timeoutMs: OCR_TIMEOUT_MS }
+    );
+
+    if (image.code !== 0 || !image.stdout.length) {
+      warnings.push(image.timedOut ? "pdf_to_image_timeout" : "pdf_to_image_failed");
+      return { text: "", warnings };
+    }
+
+    const ocr = await runCommand(
+      "tesseract",
+      ["stdin", "stdout", "-l", "eng", "--oem", "1", "--psm", "4"],
+      { input: image.stdout, timeoutMs: OCR_TIMEOUT_MS }
+    );
+
+    if (ocr.code !== 0) {
+      warnings.push(ocr.timedOut ? "pdf_ocr_timeout" : "pdf_ocr_failed");
+      return { text: "", warnings };
+    }
+
+    const text = normalizeText(ocr.stdout.toString("utf8"));
+    if (!text) warnings.push("pdf_ocr_empty");
+    return { text, warnings };
+  } finally {
+    await fs.promises.rm(tempDir, { recursive: true, force: true }).catch(() => {});
+  }
 }
 
 function extractBlockAfter(label, lines, maxLines = 4) {
@@ -84,41 +224,98 @@ function extractInlineOrBlock(label, lines, maxLines = 4) {
   return extractBlockAfter(label, lines, maxLines);
 }
 
-function extractPhone(lines, text) {
-  const phoneLine = lines.find((line) =>
-    /(phone|tel|mobile|contact)/i.test(line)
+function cleanIdentifier(rawValue) {
+  return String(rawValue || "")
+    .toUpperCase()
+    .replace(/^[^A-Z0-9]+/, "")
+    .replace(/[^A-Z0-9/-]+$/g, "")
+    .replace(/^[-/]+|[-/]+$/g, "")
+    .trim();
+}
+
+function isLikelyIdentifier(value) {
+  if (!value || value.length < 4) return false;
+  const digitCount = (value.match(/\d/g) || []).length;
+  if (digitCount < 2) return false;
+  if (!/^[A-Z0-9][A-Z0-9/-]*$/.test(value)) return false;
+  if (IDENTIFIER_TOKEN_STOPLIST.has(value)) return false;
+  return true;
+}
+
+function normalizeFilenameIdentifier(value) {
+  return String(value || "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9/-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^[-/]+|[-/]+$/g, "")
+    .trim();
+}
+
+function inferPoNumberFromFilename(fileName) {
+  const base = normalizeFilenameIdentifier(path.parse(fileName || "").name);
+  if (!base) return "";
+  const poCandidate = base.match(/[A-Z0-9/-]*P[O0][A-Z0-9/-]*/);
+  if (!poCandidate || !poCandidate[0]) return "";
+  const normalized = cleanIdentifier(poCandidate[0].replace(/P0/g, "PO"));
+  return isLikelyIdentifier(normalized) ? normalized : "";
+}
+
+function inferInvoiceNumberFromFilename(fileName) {
+  const base = normalizeFilenameIdentifier(path.parse(fileName || "").name);
+  if (!base) return "";
+  if (isLikelyIdentifier(base)) return base;
+  const tokens = base
+    .split(/[^A-Z0-9/-]+/)
+    .map((token) => cleanIdentifier(token))
+    .filter(Boolean)
+    .sort((a, b) => b.length - a.length);
+  return tokens.find((token) => isLikelyIdentifier(token)) || "";
+}
+
+function findFirstIdentifier(text, patterns) {
+  for (const pattern of patterns) {
+    const matches = text.matchAll(pattern);
+    for (const match of matches) {
+      const candidate = cleanIdentifier(match && match[1] ? match[1] : "");
+      if (isLikelyIdentifier(candidate)) return candidate;
+    }
+  }
+  return "";
+}
+
+function extractPhone(lines) {
+  const contactLines = lines.filter((line) =>
+    /(phone|tel|mobile|contact|site contact|hp)/i.test(line)
   );
-  const phoneRegex = /(\+?\d[\d\s-]{7,})/;
-  const candidate =
-    (phoneLine && phoneLine.match(phoneRegex)?.[1]) ||
-    text.match(phoneRegex)?.[1];
-  if (!candidate) return "";
-  const digits = candidate.replace(/\D/g, "");
-  if (digits.length <= 6) return "";
-  if (digits.length === 8) return digits;
-  if (digits.length >= 10) return digits;
-  return candidate.trim();
+  const sgPhoneRegex = /(?:\+65[\s-]?)?(\d{8})\b/;
+  for (const line of contactLines) {
+    const sgPhone = line.match(sgPhoneRegex);
+    if (sgPhone && sgPhone[1]) return sgPhone[1];
+  }
+  return "";
 }
 
 function parseGoodsLines(lines) {
   const goods = [];
   lines.forEach((line) => {
     const cleaned = line.replace(/\s{2,}/g, " ").trim();
-    if (!cleaned || cleaned.length < 3) return;
-    const qtyFirst = cleaned.match(/^(\d+)\s*(?:x|pcs|qty)?\s+(.+)$/i);
+    if (!cleaned || cleaned.length < 4 || GOODS_STOP_WORDS.test(cleaned)) return;
+
+    const qtyFirst = cleaned.match(/^(\d{1,4})\s*(?:x|pcs|qty)?\s+(.+)$/i);
     if (qtyFirst) {
       const quantity = Number(qtyFirst[1]);
       const goodsName = qtyFirst[2].trim();
-      if (quantity > 0 && goodsName.length > 2) {
+      if (quantity > 0 && goodsName.length > 3) {
         goods.push({ goodsName, quantity });
       }
       return;
     }
-    const qtyLast = cleaned.match(/^(.+?)\s+(\d+)\s*(?:x|pcs|qty)?$/i);
+
+    const qtyLast = cleaned.match(/^(.+?)\s+(\d{1,4})\s*(?:x|pcs|qty)?$/i);
     if (qtyLast) {
       const quantity = Number(qtyLast[2]);
       const goodsName = qtyLast[1].trim();
-      if (quantity > 0 && goodsName.length > 2) {
+      if (quantity > 0 && goodsName.length > 3) {
         goods.push({ goodsName, quantity });
       }
     }
@@ -132,36 +329,24 @@ function parseDocumentText(rawText) {
   const nonEmptyLines = lines.filter((line) => NON_EMPTY_LINE.test(line));
 
   const invoicePatterns = [
-    /invoice\s*(?:no\.?|number|#)?\s*[:\-]?\s*([A-Z0-9\-]+)/i,
-    /\bdo\s*(?:no\.?|number|#)?\s*[:\-]?\s*([A-Z0-9\-]+)/i,
+    /\binvoice\s*(?:no\.?|number|#|num|n[o0])\s*[:\-]?\s*([A-Z0-9][A-Z0-9/-]{2,})/gi,
+    /\bdo\s*(?:no\.?|number|#|num|n[o0])\s*[:\-]?\s*([A-Z0-9][A-Z0-9/-]{2,})/gi,
   ];
   const poPatterns = [
-    /\bpo\s*(?:no\.?|number|#)?\s*[:\-]?\s*([A-Z0-9\-]+)/i,
-    /purchase\s*order\s*(?:no\.?|number|#)?\s*[:\-]?\s*([A-Z0-9\-]+)/i,
+    /\bpo\s*(?:no\.?|number|#|num|n[o0])\s*[:\-]?\s*([A-Z0-9][A-Z0-9/-]{2,})/gi,
+    /\bpurchase\s*order\s*(?:no\.?|number|#|num|n[o0])\s*[:\-]?\s*([A-Z0-9][A-Z0-9/-]{2,})/gi,
+    /\bour\s*ref(?:erence)?\s*[:\-]?\s*([A-Z0-9/-]*PO[A-Z0-9/-]*)/gi,
   ];
 
-  let invoiceNumber = "";
-  for (const pattern of invoicePatterns) {
-    const match = text.match(pattern);
-    if (match && match[1]) {
-      invoiceNumber = match[1].trim();
-      break;
-    }
-  }
-
-  let poNumber = "";
-  for (const pattern of poPatterns) {
-    const match = text.match(pattern);
-    if (match && match[1]) {
-      poNumber = match[1].trim();
-      break;
-    }
-  }
+  let invoiceNumber = findFirstIdentifier(text, invoicePatterns);
+  const poNumber = findFirstIdentifier(text, poPatterns);
 
   const deliveryCandidates = [
     extractInlineOrBlock("Delivery Address", nonEmptyLines),
     extractInlineOrBlock("Ship To", nonEmptyLines),
     extractInlineOrBlock("Deliver To", nonEmptyLines),
+    extractInlineOrBlock("Delivery Location", nonEmptyLines),
+    extractInlineOrBlock("Site Address", nonEmptyLines),
   ];
   const deliveryBlock = deliveryCandidates.find((block) => block.length) || [];
   const deliveryAddress = deliveryBlock.length ? deliveryBlock.join(", ") : "";
@@ -171,18 +356,22 @@ function parseDocumentText(rawText) {
   const companyLine = billToBlock[1] || "";
 
   const emailMatch = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
-  const phoneMatch = extractPhone(nonEmptyLines, text);
+  const phoneMatch = extractPhone(nonEmptyLines);
 
   const goodsStartIndex = nonEmptyLines.findIndex((line) =>
-    /description|item|product/i.test(line)
+    /description|item|product|qty|quantity/i.test(line)
   );
   const goodsLines =
     goodsStartIndex >= 0
-      ? nonEmptyLines.slice(goodsStartIndex + 1, goodsStartIndex + 20)
-      : nonEmptyLines.slice(0, 20);
+      ? nonEmptyLines.slice(goodsStartIndex + 1, goodsStartIndex + 25)
+      : [];
   const goods = parseGoodsLines(goodsLines);
 
   const warnings = [];
+  if (!invoiceNumber && poNumber) {
+    invoiceNumber = poNumber;
+    warnings.push("invoice_fallback_from_po");
+  }
   if (!invoiceNumber) warnings.push("invoiceNumber_not_found");
   if (!deliveryAddress) warnings.push("deliveryAddress_not_found");
   if (!goods.length) warnings.push("goods_not_found");
@@ -1204,6 +1393,14 @@ exports.parseDocument = [
       const parsed = await pdfParse(req.file.buffer);
       text = parsed.text || "";
       if (normalizeText(text).length < MIN_EXTRACTABLE_TEXT_LENGTH) {
+        const ocr = await extractTextFromPdfOcr(req.file.buffer);
+        parsingWarnings.push(...(ocr.warnings || []));
+        if (ocr.text) {
+          text = [normalizeText(text), ocr.text].filter(Boolean).join("\n");
+          parsingWarnings.push("pdf_ocr_applied");
+        }
+      }
+      if (normalizeText(text).length < MIN_EXTRACTABLE_TEXT_LENGTH) {
         parsingWarnings.push("pdf_text_not_extractable");
         parsingWarnings.push("upload_image_for_ocr");
       }
@@ -1218,6 +1415,28 @@ exports.parseDocument = [
     }
 
     const parsed = parseDocumentText(text);
+    if (!parsed.poNumber) {
+      const poFromFilename = inferPoNumberFromFilename(name);
+      if (poFromFilename) {
+        parsed.poNumber = poFromFilename;
+        parsed.warnings.push("po_inferred_from_filename");
+      }
+    }
+    if (!parsed.invoiceNumber) {
+      const invoiceFromFilename = inferInvoiceNumberFromFilename(name);
+      if (invoiceFromFilename) {
+        parsed.invoiceNumber = invoiceFromFilename;
+        parsed.warnings.push("invoice_inferred_from_filename");
+      } else if (parsed.poNumber) {
+        parsed.invoiceNumber = parsed.poNumber;
+        parsed.warnings.push("invoice_fallback_from_po");
+      }
+    }
+    if (parsed.invoiceNumber) {
+      parsed.warnings = (parsed.warnings || []).filter(
+        (warning) => warning !== "invoiceNumber_not_found"
+      );
+    }
     parsed.warnings = Array.from(
       new Set([...(parsed.warnings || []), ...parsingWarnings])
     );

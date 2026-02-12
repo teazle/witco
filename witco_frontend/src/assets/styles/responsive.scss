@@ -2,112 +2,177 @@
 Template Name: Material Pro Admin
 File: scss
 */
-/*============================================================== 
- For Laptop & above all (1650px) 
- ============================================================== */
 
-@media(min-width:1650px) {
-    .main-container.boxed{
+/*==============================================================
+ For Laptop & above all (1650px)
+============================================================== */
+
+@media (min-width: 1650px) {
+    .main-container.boxed {
         max-width: 1920px;
         margin: 0 auto;
     }
 }
-/*============================================================== 
- For Laptop & above all (1370px) 
- ============================================================== */
 
-@media(max-width:1600px) {
-     .main-container.boxed{
+/*==============================================================
+ For Laptop & above all (1370px)
+============================================================== */
+
+@media (max-width: 1600px) {
+    .main-container.boxed {
         max-width: 1300px;
         margin: 0 auto;
-    } 
+    }
 }
 
+/*==============================================================
+ Small Desktop & above all (1024px)
+============================================================== */
 
-/*-- ============================================================== 
- Small Desktop & above all (1024px) 
- ============================================================== */
+@media (min-width: 1024px) {
+    .card-group {
+        padding: 0 15px;
+        display: flex;
+        flex-flow: row wrap;
 
-@media(min-width:1024px) {
-  .card-group{
-    padding: 0 15px;
-    display: flex;
-    flex-flow:row wrap;
-    .mat-card{
-       margin: 15px 0px;
-       flex: 1 0 0%;
-        border-left:1px solid $border;
-            &:first-child{
-                border:0px;
-            }
-        }
-    } 
-    
-}
+        .mat-card {
+            margin: 15px 0;
+            flex: 1 0 0%;
+            border-left: 1px solid $border;
 
-@media(max-width:1023px) {
-    .card-group{
-        margin: 15px 0;
-        .mat-card{
-            margin: 0 15px;
-            border-top:1px solid $border;
-            &:first-child{
-                border:0px;
+            &:first-child {
+                border: 0;
             }
         }
     }
 }
 
+@media (max-width: 1023px) {
+    .card-group {
+        margin: 15px 0;
 
-/*-- ============================================================== 
- Ipad & above all(768px) 
- ============================================================== */
+        .mat-card {
+            margin: 0 15px;
+            border-top: 1px solid $border;
 
-@media(min-width:768px) {
+            &:first-child {
+                border: 0;
+            }
+        }
+    }
+}
+
+/*==============================================================
+ Ipad & above all (768px)
+============================================================== */
+
+@media (min-width: 768px) {
     .navbar-header {
         width: 225px;
-        flex-shrink:0;
+        flex-shrink: 0;
+
         .navbar-brand {
-            padding-top: 0px;
+            padding-top: 0;
         }
     }
-    
 }
 
+/*==============================================================
+ Tablet and below (1099px)
+============================================================== */
 
-/*-- ============================================================== 
- Phone and below ipad(767px) 
- ============================================================== */
-
-@media(max-width:767px) {
-    .mat-toolbar-single-row{
-        height: 64px!important;
+@media (max-width: 1099px) {
+    .table-wrap .table-shell {
+        min-width: 900px;
+        table-layout: auto;
     }
-    .d-flex{
+
+    .table-shell .mat-header-cell,
+    .table-shell .mat-cell {
+        white-space: normal;
+    }
+}
+
+/*==============================================================
+ Phone and below ipad (767px)
+============================================================== */
+
+@media (max-width: 767px) {
+    .mat-toolbar-single-row {
+        height: 64px !important;
+    }
+
+    .d-flex {
         display: block;
     }
-    .no-block{
+
+    .no-block {
         display: flex;
     }
-    .email-right-panel{
-        .col-md-2{
+
+    .email-right-panel {
+        .col-md-2 {
             width: 100%;
         }
-        }
-    .icon-box{
+    }
+
+    .icon-box {
         width: 50%;
     }
 
+    .table-wrap {
+        overflow-x: auto;
+        overflow-y: hidden;
+    }
+
+    .table-wrap .table-shell,
+    table.mat-table.table-shell,
+    table.mat-table.mat-elevation-z8 {
+        min-width: 720px;
+        table-layout: auto;
+    }
+
+    .table-shell .mat-header-cell,
+    .table-shell .mat-cell,
+    table.mat-table.mat-elevation-z8 .mat-header-cell,
+    table.mat-table.mat-elevation-z8 .mat-cell {
+        padding: 10px;
+        font-size: 13px;
+    }
+
+    .table-shell .mat-header-cell,
+    table.mat-table.mat-elevation-z8 .mat-header-cell {
+        font-size: 11px;
+        letter-spacing: 0.06em;
+    }
+
+    .form-toolbar {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .form-toolbar .toolbar-actions {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .form-toolbar .toolbar-actions button {
+        width: 100%;
+    }
+
     /* Prevent mat-form-field errors/hints from overlapping inputs on small screens */
-    .mat-form-field-wrapper{
+    .mat-form-field-wrapper {
         padding-bottom: 0;
     }
-    .mat-form-field-subscript-wrapper{
+
+    .mat-form-field-subscript-wrapper {
         position: static;
         margin-top: 4px;
     }
+
     .mat-form-field-subscript-wrapper .mat-error,
-    .mat-form-field-subscript-wrapper .mat-hint{
+    .mat-form-field-subscript-wrapper .mat-hint {
         line-height: 1.2;
         white-space: normal;
     }

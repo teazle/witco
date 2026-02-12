@@ -4,7 +4,7 @@
 <div *ngIf="userDetails.userRole == 'admin'" class="main-container app-glass" [dir]="dir"
     [ngClass]="{'minisidebar': minisidebar, 'boxed': boxed, 'danger': danger, 'blue': blue, 'green': green, 'dark': dark }">
 
-    <mat-toolbar class="topbar telative green">
+    <mat-toolbar class="topbar app-topbar telative green">
         <div class="navbar-header">
             <a class="navbar-brand" [routerLink]="['/starter']">
                 <!-- Logo icon -->
@@ -16,13 +16,15 @@
         </div>
 
 
-        <button mat-icon-button (click)="snav.toggle()" value="sidebarclosed">
+        <button mat-icon-button class="topbar-menu-toggle" (click)="snav.toggle()" value="sidebarclosed">
             <mat-icon>menu</mat-icon>
         </button>
 
         <span fxFlex></span>
 
-        <app-header></app-header>
+        <div class="topbar-profile">
+            <app-header></app-header>
+        </div>
 
     </mat-toolbar>
 
@@ -85,7 +87,7 @@
 
 <div *ngIf="userDetails.userRole == 'driver'" class="main-container app-glass" [dir]="dir"
     [ngClass]="{'minisidebar': minisidebar, 'boxed': boxed, 'danger': danger, 'blue': blue, 'green': green, 'dark': dark }">
-    <mat-toolbar class="topbar telative green">
+    <mat-toolbar class="topbar app-topbar telative green">
         <div class="navbar-header">
             <a class="navbar-brand" [routerLink]="['/my-jobs-Delivering']"> 
             <b>
@@ -95,6 +97,6 @@
         </div>
         <span fxFlex></span>
     </mat-toolbar>
-    <app-pwa #end position="end" class="chat-panel" mode="over" opened="false" class="page-wrapper">
+    <app-pwa #end position="end" mode="over" opened="false" class="page-wrapper chat-panel">
     </app-pwa>
 </div>

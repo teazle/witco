@@ -119,3 +119,20 @@ mat-icon {
         min-width: 72px;
     }
 }
+
+@media (max-width: 767px) {
+    .table-shell {
+        min-width: 760px;
+        table-layout: auto;
+    }
+
+    .mat-column-action {
+        min-width: 108px;
+    }
+
+    .mat-column-email,
+    .mat-column-companyName,
+    .mat-column-address {
+        min-width: 170px;
+    }
+}

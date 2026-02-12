@@ -2,43 +2,69 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap');
 
 :root {
-    --background: 220 20% 97%;
-    --foreground: 222 47% 11%;
+    --background: 220 24% 96%;
+    --foreground: 222 42% 14%;
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
-    --primary: 238 45% 45%;
+    --card-foreground: 222 42% 14%;
+
+    --primary: 236 48% 46%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222 47% 11%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
-    --accent: 152 55% 38%;
+    --primary-soft: 236 48% 96%;
+
+    --secondary: 205 44% 95%;
+    --secondary-foreground: 222 42% 16%;
+
+    --accent: 168 58% 36%;
     --accent-foreground: 0 0% 100%;
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 238 45% 45%;
+
+    --danger: 337 88% 50%;
+    --danger-foreground: 0 0% 100%;
+
+    --muted: 214 36% 95%;
+    --muted-foreground: 220 14% 44%;
+
+    --border: 214 32% 87%;
+    --border-strong: 218 22% 78%;
+    --input: 214 32% 88%;
+    --ring: 236 48% 46%;
 
     --font-display: 'Outfit', sans-serif;
     --font-body: 'Inter', sans-serif;
 
-    --radius-card: 12px;
+    --radius-card: 14px;
     --radius-control: 10px;
     --radius-pill: 999px;
 
+    --space-1: 4px;
     --space-2: 8px;
     --space-3: 12px;
     --space-4: 16px;
     --space-5: 20px;
     --space-6: 24px;
 
-    --surface-glass-1: hsl(0 0% 100% / 0.12);
-    --surface-glass-2: hsl(0 0% 100% / 0.2);
-    --text-high: hsl(218 47% 11%);
-    --text-medium: hsl(221 14% 41%);
-    --border-soft: hsl(214 32% 91% / 0.45);
-    --row-hover: hsl(214 36% 84% / 0.36);
+    --surface-toolbar: 0 0% 100%;
+    --surface-sidebar: 231 40% 35%;
+    --surface-sidebar-hover: 232 43% 42%;
+    --surface-sidebar-active: 193 44% 36%;
 
-    --glass-shadow: 0 16px 34px rgba(15, 23, 42, 0.25);
+    --surface-glass-1: hsl(0 0% 100% / 0.14);
+    --surface-glass-2: hsl(0 0% 100% / 0.24);
+
+    --surface-table-header: 0 0% 98%;
+    --surface-table-row: 0 0% 100%;
+    --surface-table-row-alt: 220 35% 98%;
+    --surface-table-row-hover: 236 48% 93%;
+
+    --text-high: hsl(220 42% 16%);
+    --text-medium: hsl(220 15% 42%);
+    --text-low: hsl(220 14% 52%);
+
+    --glass-shadow: 0 18px 40px rgba(15, 23, 42, 0.24);
+    --card-shadow: 0 14px 30px rgba(15, 23, 42, 0.12);
+}
+
+* {
+    box-sizing: border-box;
 }
 
 html,
@@ -61,22 +87,37 @@ h6 {
     font-family: var(--font-display);
 }
 
-mat-sidenav {
-    width: 240px !important;
+a,
+button,
+[role='button'] {
+    transition: color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
-mat-toolbar.green {
-    background-color: #ffffff !important;
+:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+}
+
+mat-sidenav {
+    width: 248px !important;
+}
+
+mat-toolbar.green,
+mat-toolbar.app-topbar {
+    background-color: hsl(var(--surface-toolbar)) !important;
+    color: hsl(var(--foreground));
 }
 
 .mat-card {
-    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12) !important;
+    box-shadow: var(--card-shadow) !important;
     border-radius: var(--radius-card) !important;
 }
 
 .mat-raised-button,
 .mat-flat-button,
-.mat-stroked-button {
+.mat-stroked-button,
+.mat-icon-button,
+.mat-button-toggle-group {
     border-radius: var(--radius-control) !important;
 }
 
@@ -90,7 +131,7 @@ mat-toolbar.green {
 }
 
 .mat-sort-header-arrow {
-    color: orange !important;
+    color: hsl(var(--primary)) !important;
     opacity: 1 !important;
 }
 
@@ -107,6 +148,7 @@ mat-toolbar.green {
 
 .mat-dialog-container {
     position: relative;
+    border-radius: 14px !important;
 }
 
 .cdk-overlay-pane.center-dialog {
@@ -119,7 +161,7 @@ mat-toolbar.green {
 .close-button {
     right: 7px;
     position: absolute;
-    color: blue;
+    color: hsl(var(--primary));
     top: 2px;
     font-size: 20px;
 }
@@ -144,7 +186,7 @@ mat-spinner.spinner1 svg {
     width: 100%;
     top: 0;
     z-index: 999;
-    background-color: black;
+    background-color: #000;
     position: fixed;
 }
 
@@ -153,6 +195,7 @@ mat-spinner.spinner1 svg {
     padding: 0 !important;
     overflow: hidden;
     border-radius: var(--radius-card) !important;
+    border: 1px solid hsl(var(--border) / 0.82);
 }
 
 .page-card .mat-card-content {
@@ -166,22 +209,23 @@ mat-spinner.spinner1 svg {
     justify-content: space-between;
     gap: var(--space-4);
     padding: var(--space-4) var(--space-6);
-    border-bottom: 1px solid hsl(var(--border));
+    border-bottom: 1px solid hsl(var(--border) / 0.72);
     flex-wrap: wrap;
 }
 
 .page-title {
     margin: 0;
-    font-size: 18px;
+    font-size: 28px;
     font-weight: 700;
-    color: var(--text-high);
+    line-height: 1.1;
+    color: hsl(var(--text-high));
 }
 
 .page-subtitle {
-    margin: 4px 0 0;
+    margin: 6px 0 0;
     font-size: 13px;
-    line-height: 1.4;
-    color: var(--text-medium);
+    line-height: 1.5;
+    color: hsl(var(--text-medium));
 }
 
 .page-actions {
@@ -205,6 +249,7 @@ mat-spinner.spinner1 svg {
     gap: var(--space-3);
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     padding: var(--space-5) var(--space-6);
+    align-items: end;
 }
 
 .form-toolbar mat-form-field {
@@ -218,6 +263,23 @@ mat-spinner.spinner1 svg {
     justify-content: flex-start;
     gap: var(--space-3);
     min-height: 56px;
+}
+
+.page-actions .mat-raised-button,
+.form-toolbar .mat-flat-button,
+.form-toolbar .mat-raised-button,
+.form-toolbar .mat-stroked-button,
+.form-toolbar .mat-button {
+    min-height: 42px;
+    padding-left: 16px;
+    padding-right: 16px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+
+.page-actions .mat-raised-button .mat-icon,
+.form-toolbar button .mat-icon {
+    margin-right: 6px;
 }
 
 .table-wrap {
@@ -265,15 +327,31 @@ mat-spinner.spinner1 svg {
     letter-spacing: 0.08em;
     line-height: 1.2;
     white-space: nowrap;
-    padding: 14px 14px;
+    padding: 15px 14px;
+    color: hsl(var(--text-high));
+    background: hsl(var(--surface-table-header));
+    border-bottom: 1px solid hsl(var(--border));
 }
 
 .table-shell .mat-cell {
-    font-size: 13px;
-    line-height: 1.45;
-    padding: 13px 14px;
+    font-size: 14px;
+    line-height: 1.42;
+    padding: 14px;
     white-space: normal;
     word-break: break-word;
+    color: hsl(var(--text-high));
+    border-bottom: 1px solid hsl(var(--border) / 0.88);
+    background: hsl(var(--surface-table-row));
+}
+
+.table-shell .mat-row:nth-child(even) .mat-cell {
+    background: hsl(var(--surface-table-row-alt));
+}
+
+.table-shell .mat-row:hover .mat-cell,
+.table-shell .mat-row.cdk-drag-preview .mat-cell,
+.table-shell .mat-row.cdk-drag-placeholder .mat-cell {
+    background: hsl(var(--surface-table-row-hover)) !important;
 }
 
 .table-shell .mat-header-cell:first-child {
@@ -288,13 +366,27 @@ mat-spinner.spinner1 svg {
 .table-shell .mat-column-Action,
 .table-shell .mat-column-editJob,
 .table-shell .mat-column-visibility,
-.table-shell .mat-column-location {
+.table-shell .mat-column-location,
+.table-shell .mat-column-pdf,
+.table-shell .mat-column-invoice {
     white-space: nowrap;
+}
+
+.table-shell .mat-cell .mat-icon,
+.table-shell .mat-cell button .mat-icon {
+    vertical-align: middle;
+}
+
+.table-shell .mat-cell button,
+.table-shell .mat-cell [mat-button],
+.table-shell .mat-cell [mat-icon-button] {
+    min-width: 32px;
 }
 
 .page-card mat-paginator {
     padding: 0 var(--space-6) var(--space-3);
-    border-top: 1px solid hsl(var(--border) / 0.5);
+    border-top: 1px solid hsl(var(--border) / 0.7);
+    background: hsl(0 0% 100% / 0.95);
 }
 
 .page-footer {
@@ -313,6 +405,30 @@ mat-spinner.spinner1 svg {
     gap: var(--space-3);
     margin-top: var(--space-4);
     padding: 0 var(--space-6) var(--space-5);
+}
+
+.mat-form-field-appearance-outline .mat-form-field-outline {
+    color: hsl(var(--border-strong) / 0.7);
+}
+
+.mat-form-field-appearance-outline .mat-form-field-outline-thick {
+    color: hsl(var(--primary) / 0.46);
+}
+
+.mat-form-field-appearance-outline .mat-form-field-flex {
+    border-radius: var(--radius-control);
+    background: hsl(0 0% 100% / 0.94);
+}
+
+.mat-form-field-label {
+    color: hsl(var(--text-medium));
+}
+
+.mat-input-element,
+.mat-select-value-text,
+.mat-select-arrow,
+.mat-datepicker-toggle {
+    color: hsl(var(--text-high));
 }
 
 .auth-page {
@@ -370,6 +486,7 @@ mat-spinner.spinner1 svg {
 
 .auth-card .page-title {
     color: hsl(var(--primary-foreground));
+    font-size: 26px;
 }
 
 .auth-card .form-actions {
@@ -429,6 +546,10 @@ mat-spinner.spinner1 svg {
     .form-toolbar {
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     }
+
+    .page-title {
+        font-size: 24px;
+    }
 }
 
 @media (max-width: 1099px) {
@@ -446,5 +567,80 @@ mat-spinner.spinner1 svg {
     .page-actions,
     .form-toolbar .toolbar-actions {
         width: 100%;
+    }
+
+    .table-wrap .table-shell {
+        min-width: 900px;
+        table-layout: auto;
+    }
+
+    .table-shell .mat-header-cell,
+    .table-shell .mat-cell {
+        padding-left: 11px;
+        padding-right: 11px;
+    }
+}
+
+@media (max-width: 767px) {
+    .mat-toolbar-single-row,
+    mat-toolbar.topbar {
+        min-height: 64px;
+        height: 64px !important;
+    }
+
+    .page-title {
+        font-size: 20px;
+    }
+
+    .page-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .page-actions .mat-raised-button,
+    .form-toolbar .toolbar-actions .mat-flat-button,
+    .form-toolbar .toolbar-actions .mat-raised-button {
+        flex: 1 1 auto;
+        justify-content: center;
+    }
+
+    .form-toolbar {
+        grid-template-columns: 1fr;
+        gap: var(--space-2);
+    }
+
+    .table-wrap {
+        padding-top: var(--space-4);
+        padding-bottom: var(--space-4);
+    }
+
+    .table-wrap .table-shell {
+        min-width: 720px;
+        table-layout: auto;
+    }
+
+    .table-shell .mat-header-cell {
+        font-size: 11px;
+        padding: 12px 10px;
+    }
+
+    .table-shell .mat-cell {
+        font-size: 13px;
+        padding: 11px 10px;
+    }
+
+    .mat-form-field-wrapper {
+        padding-bottom: 0;
+    }
+
+    .mat-form-field-subscript-wrapper {
+        position: static;
+        margin-top: 4px;
+    }
+
+    .mat-form-field-subscript-wrapper .mat-error,
+    .mat-form-field-subscript-wrapper .mat-hint {
+        line-height: 1.2;
+        white-space: normal;
     }
 }

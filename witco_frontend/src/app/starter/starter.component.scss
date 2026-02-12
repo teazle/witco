@@ -51,9 +51,18 @@ table {
   line-height: 1.4;
 }
 
-.mat-column-Action .btn {
+.mat-column-Action .btn,
+.mat-column-location .btn,
+.mat-column-visibility .btn {
   padding: 0 !important;
-  min-width: 28px;
+  min-width: 30px;
+  border-radius: 8px;
+}
+
+.mat-column-Action .mat-icon,
+.mat-column-location .mat-icon,
+.mat-column-visibility .mat-icon {
+  cursor: pointer;
 }
 
 .save-btn {
@@ -95,14 +104,35 @@ table {
   }
 
   .mat-column-first_name {
-    width: 32%;
+    width: 30%;
   }
 
   .mat-column-email {
-    width: 40%;
+    width: 38%;
   }
 
   .mat-column-Action {
-    width: 18%;
+    width: 22%;
+  }
+}
+
+@media (max-width: 767px) {
+  .table-shell {
+    min-width: 760px;
+    table-layout: auto;
+  }
+
+  .mat-column-Action {
+    min-width: 130px;
+  }
+
+  .mat-column-location,
+  .mat-column-visibility {
+    min-width: 90px;
+  }
+
+  .mat-column-first_name,
+  .mat-column-email {
+    min-width: 170px;
   }
 }

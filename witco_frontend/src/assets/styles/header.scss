@@ -3,89 +3,99 @@ Template Name: Material Pro Admin
 File: scss
 */
 
-
 /*******************
  Topbar
 *******************/
-mat-toolbar{
+mat-toolbar {
     box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
     background: $white;
     color: $headingtext;
     border-bottom: 1px solid $border;
-    
-    &.topbar{
-        padding: 0px 15px;
+
+    &.topbar {
+        padding: 0 16px;
+        min-height: 64px;
     }
+
     .navbar-header {
-        
         text-align: center;
+
         .navbar-brand {
             display: flex;
             line-height: 18px;
-            
             align-items: center;
-             
+
             b {
-               margin-right: 5px;
+                margin-right: 5px;
             }
-            b img{
-                // height : 43px;
-                width:100%;
+
+            b img {
+                width: 100%;
             }
-            
         }
     }
-    
-    .app-search{
+
+    .app-search {
         display: none;
         width: 100%;
-        top: 0px;
-        left: 0px;
+        top: 0;
+        left: 0;
         z-index: 1;
         position: absolute;
-        .form-control{
+
+        .form-control {
             line-height: 42px;
-            
         }
-        .cl-srh-btn{
+
+        .cl-srh-btn {
             position: absolute;
             top: 12px;
             right: 15px;
             font-size: 15px;
-            color:$bodytext;
-            cursor: pointer
+            color: $bodytext;
+            cursor: pointer;
         }
     }
-    .profile-pic{
+
+    .profile-pic {
         width: 40px;
         height: 40px;
         border-radius: 100%;
     }
 }
-/*******************
- Topbar
-*******************/
+
 .topbar {
-  position: relative;
-  /* Make sure the toolbar will stay on top of the content as it scrolls past. */
-  z-index: 2;
+    position: relative;
+    z-index: 2;
+
+    .topbar-menu-toggle {
+        margin-left: 6px;
+    }
+
+    .topbar-profile {
+        display: inline-flex;
+        align-items: center;
+        min-height: 48px;
+    }
 }
 
 .example-sidenav-container {
-  /* When the sidenav is not fixed, stretch the sidenav container to fill the available space. This
-     causes `<mat-sidenav-content>` to act as our scrolling element for desktop layouts. */
-  flex: 1;
+    flex: 1;
 }
 
 .example-sidenav-container {
-  /* When the sidenav is fixed, don't constrain the height of the sidenav container. This allows the
-     `<body>` to be our scrolling element for mobile layouts. */
-  flex: 1 0 auto;
-}
-.profilePhoto mat-icon{
-    font-size: 36px;
-    height: 36px;
-    width: 36px;
-    margin-bottom: -14px;
+    flex: 1 0 auto;
 }
 
+.profilePhoto {
+    border-radius: 10px !important;
+    width: 44px;
+    height: 44px;
+}
+
+.profilePhoto mat-icon {
+    font-size: 34px;
+    height: 34px;
+    width: 34px;
+    margin-bottom: -10px;
+}

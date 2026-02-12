@@ -12,12 +12,12 @@
 }
 
 .search-field {
-  min-width: 240px;
+  min-width: 260px;
 }
 
 .page-subtitle {
   margin: 4px 0 0;
-  color: #6b6b6b;
+  color: hsl(var(--muted-foreground));
   font-size: 13px;
 }
 
@@ -111,5 +111,21 @@
   .mat-column-action {
     width: 18%;
     min-width: 76px;
+  }
+}
+
+@media (max-width: 767px) {
+  .search-field {
+    min-width: 100%;
+    width: 100%;
+  }
+
+  .table-shell {
+    min-width: 760px;
+    table-layout: auto;
+  }
+
+  .mat-column-action {
+    min-width: 112px;
   }
 }

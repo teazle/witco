@@ -1,32 +1,37 @@
-mat-card{
-    max-height: calc(100% - 128px)!important;
+mat-card {
+    max-height: calc(100% - 128px) !important;
     overflow: auto;
 }
-.address{
-  height: 104px!important;
-  overflow: auto;
+
+.address {
+    height: 104px !important;
+    overflow: auto;
 }
+
 table {
     width: 100%;
 }
-.inner-table{
+
+.inner-table {
     overflow-x: auto;
 }
-.section-heading{
+
+.section-heading {
     font-size: 20px;
-    font-weight: 600;
+    font-weight: 700;
     padding-bottom: 8px;
-    border-bottom: 1px solid #e3e6ef;
+    border-bottom: 1px solid hsl(var(--border));
     margin-bottom: 12px;
+    color: hsl(var(--foreground));
 }
 
-.btn-group{
-    margin-top: 20px!important;
-    border: 1px dashed #c7cbd8;
+.btn-group {
+    margin-top: 20px !important;
+    border: 1px dashed hsl(var(--border-strong));
     border-radius: 12px;
 }
 
-.proccess-btn-group{
+.proccess-btn-group {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -35,32 +40,49 @@ table {
     flex-wrap: wrap;
 }
 
-.proccess-btn-group button{
+.proccess-btn-group button {
     flex: 1;
     min-width: 140px;
 }
 
-.submit-btn{
+.submit-btn {
     display: flex;
     align-items: center;
     justify-content: center;
     padding-top: 8px;
 }
 
-.submit-btn button{
+.submit-btn button {
     width: 100%;
     max-width: 280px;
 }
 
-.green{
-   background-color: green!important;
+.green {
+    background-color: #2e7d32 !important;
 }
 
-.paymentBtn{
+.paymentBtn {
     display: flex;
     justify-content: space-around;
     align-items: center;
 }
-.tbody{
+
+.tbody {
     word-break: break-all;
+}
+
+@media (max-width: 767px) {
+    mat-card {
+        max-height: calc(100% - 84px) !important;
+    }
+
+    .inner-table .table-shell,
+    .inner-table table.mat-table {
+        min-width: 620px;
+        table-layout: auto;
+    }
+
+    .section-heading {
+        font-size: 18px;
+    }
 }

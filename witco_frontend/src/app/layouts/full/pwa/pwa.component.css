@@ -1,37 +1,69 @@
-.menu{
+.menu {
     width: 100%;
-    position: absolute;
+    position: fixed;
+    left: 0;
     bottom: 0;
     display: flex;
-    gap: 10px;
+    gap: 8px;
     justify-content: space-around;
     align-items: center;
+    padding: 0 8px;
+    min-height: 70px;
+    background: hsl(228 34% 24% / 0.94);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-top: 1px solid hsl(0 0% 100% / 0.14);
+    z-index: 20;
 }
-h6{
+
+h6 {
     font-size: 12px;
 }
-.menu-item{
+
+.menu-item {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     color: inherit;
+    min-width: 92px;
+    min-height: 54px;
+    gap: 2px;
+    border-radius: 10px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
 }
 
-mat-nav-list{
- display: flex;
- flex-direction: row;
+.menu-item .mat-icon {
+    font-size: 20px;
+    height: 20px;
+    width: 20px;
 }
+
+mat-nav-list {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    justify-content: space-around;
+}
+
 .mat-list-item {
-    color: #41419e;
-    height: 100%!important;
+    color: hsl(0 0% 100% / 0.62);
+    height: 100% !important;
     width: 100%;
 }
-.mat-list-base{
-    padding-top: 0px;
+
+.mat-list-base {
+    padding-top: 0;
 }
+
 .selected,
-.selectedExtra{
-    color: #FFFFFF!important;
-    background-color: #41419e!important;
+.selectedExtra {
+    color: hsl(0 0% 100%) !important;
+    background-color: hsl(236 48% 46% / 0.86) !important;
+}
+
+.selected .mat-icon,
+.selectedExtra .mat-icon {
+    color: hsl(0 0% 100%) !important;
 }

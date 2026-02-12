@@ -4,8 +4,8 @@
     justify-content: center;
 }
 
-mat-card{
-    max-height: calc(100% - 80px)!important;
+mat-card {
+    max-height: calc(100% - 84px) !important;
     overflow-y: auto;
 }
 
@@ -14,8 +14,8 @@ table {
 }
 
 .mat-button-toggle-checked {
-    background-color: #41419e !important;
-    color: #FFFFFF;
+    background-color: hsl(var(--primary)) !important;
+    color: #fff;
 }
 
 td.mat-cell,
@@ -25,7 +25,7 @@ th.mat-header-cell {
 }
 
 mat-button-toggle {
-    border-radius: 4px;
+    border-radius: 6px;
 }
 
 .text {
@@ -47,14 +47,16 @@ mat-button-toggle {
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 28px !important;
-    width: 28px !important;
+    height: 30px !important;
+    width: 30px !important;
 }
-.next-btn{
+
+.next-btn {
     display: flex;
     align-items: center;
     justify-content: center;
 }
+
 .container {
     position: relative;
 }
@@ -71,12 +73,22 @@ mat-button-toggle {
     font-size: 36px;
 }
 
-.location{
-    color: #C62828;
-  }
+.location {
+    color: #c62828;
+}
 
+.mapbutton {
+    background-color: hsl(var(--primary));
+    color: #fff;
+}
 
-.mapbutton{
-    background-color:#41419e;
-    color: #FFFFFF;
+@media (max-width: 767px) {
+    mat-card {
+        max-height: calc(100% - 86px) !important;
+    }
+
+    .table-shell {
+        min-width: 700px;
+        table-layout: auto;
+    }
 }

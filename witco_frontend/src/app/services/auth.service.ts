@@ -19,6 +19,8 @@ export class AuthService {
   private userId = new BehaviorSubject<any>({});
   userData$ = this.userData.asObservable();
   loader = new BehaviorSubject(false);
+  private loaderRequestCount = 0;
+  private loaderEmitScheduled = false;
   localDataValuesChange: Subject<any> = new Subject<any>();
   private second = new Subject<any>();
   second$ = this.second.asObservable();
@@ -102,11 +104,30 @@ export class AuthService {
   }
 
   setLoader(value) {
-    this.loader.next(value);
+    if (value) {
+      this.loaderRequestCount += 1;
+    } else {
+      this.loaderRequestCount = Math.max(this.loaderRequestCount - 1, 0);
+    }
+    this.emitLoaderState();
   }
 
   getLoader() {
     return this.loader.asObservable();
+  }
+  resetLoader() {
+    this.loaderRequestCount = 0;
+    this.emitLoaderState();
+  }
+  private emitLoaderState() {
+    if (this.loaderEmitScheduled) {
+      return;
+    }
+    this.loaderEmitScheduled = true;
+    Promise.resolve().then(() => {
+      this.loaderEmitScheduled = false;
+      this.loader.next(this.loaderRequestCount > 0);
+    });
   }
   getAllData(url:any){
     // let headers = this.setHeaders();
