@@ -1,5 +1,5 @@
 .date-toolbar {
-  grid-template-columns: repeat(2, minmax(220px, 1fr)) minmax(260px, 300px);
+  grid-template-columns: repeat(2, minmax(220px, 1fr)) minmax(190px, 220px);
   align-items: center;
 }
 
@@ -12,11 +12,7 @@
 }
 
 .date-toolbar .toolbar-actions--date .mat-flat-button {
-  min-width: 122px;
-  min-height: 56px;
-  padding: 0 20px;
-  font-size: 22px;
-  line-height: 1;
+  min-width: 86px;
 }
 
 :host ::ng-deep .date-toolbar .mat-form-field-wrapper {
@@ -174,7 +170,7 @@
 
 @media only screen and (max-width: 1099px) {
   .date-toolbar {
-    grid-template-columns: repeat(2, minmax(180px, 1fr)) minmax(230px, 270px);
+    grid-template-columns: repeat(2, minmax(180px, 1fr)) minmax(170px, 200px);
   }
 
   .board-toolbar__controls {
@@ -194,12 +190,6 @@
   .date-toolbar .toolbar-actions--date {
     justify-content: flex-start;
     height: auto;
-  }
-
-  .date-toolbar .toolbar-actions--date .mat-flat-button {
-    min-width: 110px;
-    min-height: 52px;
-    font-size: 20px;
   }
 
   .column {
