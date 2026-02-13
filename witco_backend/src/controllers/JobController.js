@@ -586,6 +586,191 @@ function extractPhone(lines) {
   return "";
 }
 
+function normalizePersonName(value) {
+  const raw = String(value || "")
+    .replace(/\b(mr|mrs|ms|miss|dr)\./gi, "$1 ")
+    .replace(/[|]/g, " ")
+    .replace(/\b(?:payment\s*terms?|tel|fax|phone|contact\s*no|no\.?)\b.*$/i, "")
+    .replace(/\b(?:site\s*contact\s*person|site|delivery\s*to|delivery\s*location)\b.*$/i, "")
+    .replace(/\b\d{4}\s*[- ]?\s*\d{4}\b/g, " ")
+    .replace(/[^\w\s.'-]/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+  if (!raw) return "";
+
+  const titledMatch = raw.match(
+    /\b(?:mr|mrs|ms|miss|dr)\.?\s+([A-Za-z][A-Za-z.'-]*(?:\s+[A-Za-z][A-Za-z.'-]*){0,3})\b/i
+  );
+  const source = titledMatch && titledMatch[1] ? titledMatch[1] : raw;
+  const tokens = source
+    .split(/\s+/)
+    .map((token) => token.replace(/[^A-Za-z.'-]/g, "").trim())
+    .filter(Boolean)
+    .filter((token) => !/^(mr|mrs|ms|miss|dr)$/i.test(token));
+  if (!tokens.length) return "";
+
+  const stopWords = new Set([
+    "site",
+    "delivery",
+    "location",
+    "project",
+    "payment",
+    "terms",
+    "contact",
+    "person",
+  ]);
+  const cleanedTokens = [];
+  for (const token of tokens) {
+    const lower = token.toLowerCase();
+    if (stopWords.has(lower)) break;
+    cleanedTokens.push(token);
+  }
+  while (cleanedTokens.length && cleanedTokens[cleanedTokens.length - 1].length === 1) {
+    cleanedTokens.pop();
+  }
+  if (!cleanedTokens.length) return "";
+
+  return cleanedTokens
+    .slice(0, 3)
+    .map((token) => token.charAt(0).toUpperCase() + token.slice(1).toLowerCase())
+    .join(" ")
+    .trim();
+}
+
+function cleanCompanyName(value) {
+  return String(value || "")
+    .replace(/[|]/g, " ")
+    .replace(/\b(?:purchase\s*order|form\s*no|pono|tel|fax|gst\s*no|co\s*reg\s*no)\b.*$/i, "")
+    .replace(/\bd\.\s*b\.\s*a\.\s*$/i, "")
+    .replace(/[^\w\s()&.,'/-]/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .replace(/[\/|]+$/g, "")
+    .replace(/\bANS?\s+ANDO\b/i, "ANDO")
+    .trim();
+}
+
+function isLikelyCompanyLine(value) {
+  const text = cleanCompanyName(value);
+  if (!text || text.length < 6) return false;
+  if (/witco/i.test(text)) return false;
+  if (/\b(purchase\s*order|delivery\s*to|project|quantity|description|invoice)\b/i.test(text)) {
+    return false;
+  }
+  return /\b(pte\.?\s*ltd|private\s+limited|limited|construction|builders|services|group|corporation)\b/i.test(
+    text
+  );
+}
+
+function extractCustomerIdentity(lines, template = "GENERIC") {
+  let customerName = "";
+  let customerCompany = "";
+
+  const topLines = (lines || []).slice(0, 30);
+
+  const personCandidates = [];
+  topLines.forEach((line, index) => {
+    const attnMatch = line.match(/\b(?:attn|atin|attention)\b\s*(?:to)?\s*[:.\-|]?\s*(.+)$/i);
+    if (attnMatch && attnMatch[1]) {
+      const normalized = normalizePersonName(attnMatch[1]);
+      if (normalized) personCandidates.push({ value: normalized, score: 7, index });
+    }
+    const paymentTermsLead = line.match(/\b([A-Za-z][A-Za-z.'-]{1,20}(?:\s+[A-Za-z][A-Za-z.'-]{1,20}){0,2})\s+payment\s*terms\b/i);
+    if (paymentTermsLead && paymentTermsLead[1]) {
+      const normalized = normalizePersonName(paymentTermsLead[1]);
+      if (normalized) personCandidates.push({ value: normalized, score: 6, index });
+    }
+    const contactMatch = line.match(/\b(?:contact\s*person|site\s*contact\s*person)\b\s*[:.\-|]?\s*(.+)$/i);
+    if (contactMatch && contactMatch[1]) {
+      const normalized = normalizePersonName(contactMatch[1]);
+      if (normalized) personCandidates.push({ value: normalized, score: 5, index });
+    }
+  });
+
+  if (personCandidates.length) {
+    customerName = personCandidates
+      .sort((a, b) => (b.score !== a.score ? b.score - a.score : a.index - b.index))[0]
+      .value;
+  }
+
+  if (!customerName) {
+    for (const line of topLines) {
+      const toLine = line.match(/\bto\s*[:\-]\s*(.+)$/i);
+      if (!toLine || !toLine[1]) continue;
+      const inlineContact = normalizePersonName(toLine[1]);
+      if (inlineContact && !/witco/i.test(inlineContact)) {
+        customerName = inlineContact;
+        break;
+      }
+    }
+  }
+
+  const companyCandidates = [];
+  topLines.forEach((line, index) => {
+    if (!isLikelyCompanyLine(line)) return;
+    const cleaned = cleanCompanyName(line);
+    if (!cleaned) return;
+    let score = 0;
+    if (/\b(pte\.?\s*ltd|private\s+limited)\b/i.test(cleaned)) score += 5;
+    if (/\b(construction|builders|services|corporation|group)\b/i.test(cleaned)) score += 2;
+    if (index < 8) score += 2;
+    if (template === "CKR" && /ckr/i.test(cleaned)) score += 3;
+    if (template === "CH38" && /lian\s*beng/i.test(cleaned)) score += 3;
+    if (template === "CR" && /novelty/i.test(cleaned)) score += 3;
+    companyCandidates.push({ cleaned, score, index });
+  });
+
+  if (companyCandidates.length) {
+    customerCompany = companyCandidates
+      .sort((a, b) => (b.score !== a.score ? b.score - a.score : a.index - b.index))[0]
+      .cleaned;
+  }
+
+  return {
+    customerName,
+    customerCompany,
+  };
+}
+
+function isWeakCustomerName(value) {
+  const name = normalizePersonName(value);
+  if (!name) return true;
+  const tokens = name.split(/\s+/).filter(Boolean);
+  if (!tokens.length) return true;
+  if (tokens[0].length <= 2) return true;
+  if (tokens.some((token) => token.length === 1)) return true;
+  if (/\d/.test(name)) return true;
+  return false;
+}
+
+function inferCustomerIdentityFromCandidates(parseCandidates, template = "GENERIC") {
+  if (!Array.isArray(parseCandidates) || !parseCandidates.length) {
+    return { customerName: "", customerCompany: "" };
+  }
+  const hits = parseCandidates
+    .map((candidate) => {
+      const text = normalizeText(candidate && candidate.text ? candidate.text : "");
+      if (!text) return null;
+      const lines = text.split("\n").map((line) => line.trim()).filter(Boolean);
+      const identity = extractCustomerIdentity(lines, template);
+      const name = normalizePersonName(identity.customerName || "");
+      const company = cleanCompanyName(identity.customerCompany || "");
+      if (!name && !company) return null;
+      let score = 0;
+      if (name) score += isWeakCustomerName(name) ? 2 : 8;
+      if (company) score += 5;
+      if (name && name.split(/\s+/).length >= 2) score += 1;
+      return { customerName: name, customerCompany: company, score };
+    })
+    .filter(Boolean);
+
+  if (!hits.length) return { customerName: "", customerCompany: "" };
+  const best = hits.sort((a, b) => b.score - a.score)[0];
+  return {
+    customerName: best.customerName || "",
+    customerCompany: best.customerCompany || "",
+  };
+}
+
 function normalizeLine(value) {
   return String(value || "").replace(/\s{2,}/g, " ").trim();
 }
@@ -1834,8 +2019,10 @@ function parseDocumentText(rawText, options = {}) {
   let usedCrDeliveryFallback = false;
 
   const billToBlock = extractInlineOrBlock("Bill To", nonEmptyLines);
-  const customerLine = billToBlock[0] || "";
-  const companyLine = billToBlock[1] || "";
+  const customerIdentity = extractCustomerIdentity(nonEmptyLines, template);
+  const customerLine =
+    normalizePersonName(billToBlock[0] || "") || customerIdentity.customerName || "";
+  const companyLine = cleanCompanyName(billToBlock[1] || "") || customerIdentity.customerCompany || "";
 
   const emailMatch = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
   const phoneMatch = extractPhone(nonEmptyLines);
@@ -3159,6 +3346,26 @@ exports.parseDocument = [
       ? selectedCandidate.parsed
       : parseDocumentText(text, { fileName: name });
     parsed = reconcileGoodsQuantities(parsed, parseCandidates);
+    if (
+      !parsed.customerName ||
+      isWeakCustomerName(parsed.customerName) ||
+      !parsed.customerCompany
+    ) {
+      const inferredCustomer = inferCustomerIdentityFromCandidates(
+        parseCandidates,
+        String(parsed.template || "GENERIC")
+      );
+      if ((!parsed.customerName || isWeakCustomerName(parsed.customerName)) && inferredCustomer.customerName) {
+        parsed.customerName = inferredCustomer.customerName;
+        parsed.warnings = parsed.warnings || [];
+        parsed.warnings.push("customer_name_inferred_from_text");
+      }
+      if (!parsed.customerCompany && inferredCustomer.customerCompany) {
+        parsed.customerCompany = inferredCustomer.customerCompany;
+        parsed.warnings = parsed.warnings || [];
+        parsed.warnings.push("customer_company_inferred_from_text");
+      }
+    }
     parsed.deliveryAddress = normalizeDeliveryAddressValue(parsed.deliveryAddress || "");
     if (!parsed.deliveryAddress && String(parsed.template || "") === "CR") {
       const inferredCrDelivery = inferCrDeliveryFromCandidates(parseCandidates);

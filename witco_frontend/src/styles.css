@@ -320,8 +320,9 @@ mat-spinner.spinner1 svg {
     table-layout: auto;
 }
 
-.table-shell .mat-header-cell {
-    font-size: 12px;
+.table-shell .mat-header-cell,
+table.mat-table .mat-header-cell {
+    font-size: 15px;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -333,8 +334,10 @@ mat-spinner.spinner1 svg {
     border-bottom: 1px solid hsl(var(--border));
 }
 
-.table-shell .mat-cell {
-    font-size: 14px;
+.table-shell .mat-cell,
+table.mat-table .mat-cell,
+table.mat-table .mat-footer-cell {
+    font-size: 16px;
     line-height: 1.42;
     padding: 14px;
     white-space: normal;
@@ -346,6 +349,24 @@ mat-spinner.spinner1 svg {
 
 .table-shell .mat-row:nth-child(even) .mat-cell {
     background: hsl(var(--surface-table-row-alt));
+}
+
+.main-container:not(.app-glass) .table th {
+    font-size: 14px;
+}
+
+.main-container:not(.app-glass) .table td {
+    font-size: 16px;
+}
+
+.ngx-datatable.material .datatable-header .datatable-header-cell {
+    font-size: 14px;
+    line-height: 1.35;
+}
+
+.ngx-datatable.material .datatable-body-cell {
+    font-size: 16px;
+    line-height: 1.5;
 }
 
 .table-shell .mat-row:hover .mat-cell,
@@ -575,7 +596,9 @@ mat-spinner.spinner1 svg {
     }
 
     .table-shell .mat-header-cell,
-    .table-shell .mat-cell {
+    .table-shell .mat-cell,
+    table.mat-table .mat-header-cell,
+    table.mat-table .mat-cell {
         padding-left: 11px;
         padding-right: 11px;
     }
@@ -619,14 +642,24 @@ mat-spinner.spinner1 svg {
         table-layout: auto;
     }
 
-    .table-shell .mat-header-cell {
-        font-size: 11px;
+    .table-shell .mat-header-cell,
+    table.mat-table .mat-header-cell {
+        font-size: 14px;
         padding: 12px 10px;
     }
 
-    .table-shell .mat-cell {
-        font-size: 13px;
+    .table-shell .mat-cell,
+    table.mat-table .mat-cell {
+        font-size: 15px;
         padding: 11px 10px;
+    }
+
+    .ngx-datatable.material .datatable-header .datatable-header-cell {
+        font-size: 13px;
+    }
+
+    .ngx-datatable.material .datatable-body-cell {
+        font-size: 15px;
     }
 
     .mat-form-field-wrapper {
