@@ -40,7 +40,7 @@ const MIN_EXTRACTABLE_TEXT_LENGTH = 20;
 const OCR_TIMEOUT_MS = 45 * 1000;
 const PDF_TEXT_TIMEOUT_MS = 20 * 1000;
 const OCR_JS_FALLBACK_ENABLED = !["0", "false", "off"].includes(
-  String(process.env.OCR_JS_FALLBACK || "true").toLowerCase()
+  String(process.env.OCR_JS_FALLBACK || "false").toLowerCase()
 );
 const OCR_FORCE_JS = ["1", "true", "yes", "on"].includes(
   String(process.env.OCR_FORCE_JS || "false").toLowerCase()
