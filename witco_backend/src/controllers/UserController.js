@@ -1,4 +1,5 @@
 const User = require("../models/userModel");
+const Job = require("../models/jobModel");
 const jwt = require("jsonwebtoken");
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/AppError");
@@ -218,31 +219,112 @@ exports.resetPassword = catchAsync(async (req, res, next) => {
 });
 
 exports.search = catchAsync(async (req, res, next) => {
-    const { query } = req.body;
-    let queries = query.split(" ");
-    const fields = ["companyName", "firstName", 'deliveryAddress'];
-     const orConditions = queries.map((query) =>
-       fields.map((field) => ({ [field]: { $regex: query, $options: "i" } }))
-     );
-     const flattenedOrConditions = orConditions.reduce(
-       (acc, conditions) => [...acc, { $or: conditions }],
-       []
-     );
-      const customers = await User.aggregate([
+    const rawQuery = req.body && req.body.query ? String(req.body.query) : "";
+    const query = rawQuery.trim();
+
+    if (!query) {
+      return res.status(200).json({
+        status: "success",
+        data: [],
+      });
+    }
+
+    const words = query.split(/\s+/).filter(Boolean).slice(0, 6);
+    const buildAndConditions = (fields) =>
+      words.map((word) => ({
+        $or: fields.map((field) => ({ [field]: { $regex: word, $options: "i" } })),
+      }));
+
+    const userFields = [
+      "companyName",
+      "firstName",
+      "lastName",
+      "deliveryAddress",
+      "address",
+      "email",
+      "phone",
+    ];
+    const jobFields = [
+      "customer_companyName",
+      "customer_firstName",
+      "customer_lastName",
+      "customer_deliveryAddress",
+      "customer_address",
+      "customer_email",
+      "customer_phone",
+    ];
+
+    const [customers, historyCustomers] = await Promise.all([
+      User.find({
+        userRole: "customer",
+        $and: buildAndConditions(userFields),
+      })
+        .select("firstName lastName companyName email phone address deliveryAddress userRole")
+        .sort({ updatedAt: -1 })
+        .limit(25)
+        .lean(),
+      Job.aggregate([
         {
-        $match: {
-          userRole:"customer",
-          $and: flattenedOrConditions,
-        },},
-        {
-          $addFields: fields.reduce((fieldsToAdd, field) => {
-            fieldsToAdd[field] = `$${field}`;
-            return fieldsToAdd;
-          }, {}),
+          $match: {
+            $and: buildAndConditions(jobFields),
+          },
         },
-      ]);
-     res.status(200).json({
-       status: "success",
-       data: customers
-     });
+        { $sort: { updatedAt: -1 } },
+        {
+          $project: {
+            _id: 0,
+            firstName: { $ifNull: ["$customer_firstName", ""] },
+            lastName: { $ifNull: ["$customer_lastName", ""] },
+            companyName: { $ifNull: ["$customer_companyName", ""] },
+            email: { $ifNull: ["$customer_email", ""] },
+            phone: { $ifNull: ["$customer_phone", ""] },
+            address: { $ifNull: ["$customer_address", ""] },
+            deliveryAddress: {
+              $ifNull: ["$customer_deliveryAddress", { $ifNull: ["$customer_address", ""] }],
+            },
+            userRole: { $literal: "customer" },
+            fromHistory: { $literal: true },
+            historyJobId: { $toString: "$_id" },
+          },
+        },
+        {
+          $group: {
+            _id: {
+              firstName: { $toLower: "$firstName" },
+              lastName: { $toLower: "$lastName" },
+              companyName: { $toLower: "$companyName" },
+              deliveryAddress: { $toLower: "$deliveryAddress" },
+              phone: "$phone",
+            },
+            doc: { $first: "$$ROOT" },
+          },
+        },
+        { $replaceRoot: { newRoot: "$doc" } },
+        { $limit: 25 },
+      ]),
+    ]);
+
+    const seen = new Set();
+    const normalize = (value) => String(value || "").trim().toLowerCase();
+    const makeKey = (item) => [
+      normalize(item.firstName),
+      normalize(item.lastName),
+      normalize(item.companyName),
+      normalize(item.deliveryAddress || item.address),
+      normalize(item.phone),
+    ].join("|");
+
+    const merged = [];
+    for (const item of [...customers, ...historyCustomers]) {
+      const key = makeKey(item);
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      merged.push(item);
+      if (merged.length >= 30) break;
+    }
+
+    res.status(200).json({
+      status: "success",
+      data: merged,
+    });
 });

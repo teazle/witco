@@ -39,6 +39,41 @@ const upload = multer({
 const MIN_EXTRACTABLE_TEXT_LENGTH = 20;
 const OCR_TIMEOUT_MS = 45 * 1000;
 const PDF_TEXT_TIMEOUT_MS = 20 * 1000;
+const OCR_JS_FALLBACK_ENABLED = !["0", "false", "off"].includes(
+  String(process.env.OCR_JS_FALLBACK || "true").toLowerCase()
+);
+const OCR_FORCE_JS = ["1", "true", "yes", "on"].includes(
+  String(process.env.OCR_FORCE_JS || "false").toLowerCase()
+);
+const OCR_JS_RENDER_SCALE = Math.max(
+  1,
+  Math.min(4, Number(process.env.OCR_JS_RENDER_SCALE || 2))
+);
+const OCR_JS_MAX_PAGES = Math.max(
+  1,
+  Math.min(2, Number(process.env.OCR_JS_MAX_PAGES || 1))
+);
+const OCR_OPENAI_API_KEY =
+  process.env.OCR_OPENAI_API_KEY || process.env.OPENAI_API_KEY || "";
+const OCR_SPACE_API_KEY = process.env.OCR_SPACE_API_KEY || "";
+const OCR_SPACE_FALLBACK_ENABLED =
+  ["1", "true", "yes", "on"].includes(
+    String(process.env.OCR_SPACE_FALLBACK || "").toLowerCase()
+  ) || !!OCR_SPACE_API_KEY;
+const OCR_SPACE_ENDPOINT =
+  process.env.OCR_SPACE_ENDPOINT || "https://api.ocr.space/parse/image";
+const OCR_SPACE_LANGUAGE = process.env.OCR_SPACE_LANGUAGE || "eng";
+const OCR_SPACE_ENGINE = String(process.env.OCR_SPACE_ENGINE || "2");
+const OCR_SPACE_TIMEOUT_MS = Math.max(
+  5_000,
+  Math.min(120_000, Number(process.env.OCR_SPACE_TIMEOUT_MS || 55_000))
+);
+const OCR_OPENAI_FALLBACK_ENABLED =
+  ["1", "true", "yes", "on"].includes(
+    String(process.env.OCR_OPENAI_FALLBACK || "").toLowerCase()
+  ) || !!OCR_OPENAI_API_KEY;
+const OCR_OPENAI_MODEL = process.env.OCR_OPENAI_MODEL || "gpt-4o-mini";
+const OCR_OPENAI_BASE_URL = process.env.OCR_OPENAI_BASE_URL || "https://api.openai.com/v1";
 const MATCH_HIGH_THRESHOLD = Math.max(
   0,
   Math.min(1, Number(process.env.MATCH_HIGH_THRESHOLD || 0.92))
@@ -288,6 +323,288 @@ async function runImagePathOcrPipeline(imagePath, psmModes, warnings, labelPrefi
   return candidates;
 }
 
+function dedupeOcrCandidates(candidates = []) {
+  const sorted = [...candidates].sort((a, b) => Number(b.score || 0) - Number(a.score || 0));
+  const uniqueByText = [];
+  const seen = new Set();
+  sorted.forEach((candidate) => {
+    const key = normalizeText(candidate && candidate.text);
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    uniqueByText.push({
+      text: key,
+      score: Number(candidate && candidate.score) || 0,
+      psm: candidate && candidate.psm,
+      label: candidate && candidate.label,
+    });
+  });
+  return uniqueByText;
+}
+
+async function runImageBufferOcrWithTesseractJs(imageBuffer, psmModes, warnings, labelPrefix) {
+  const candidates = [];
+  let worker;
+  try {
+    worker = await createWorker("eng");
+  } catch (error) {
+    warnings.push(`${labelPrefix}_ocr_init_failed`);
+    return [];
+  }
+
+  try {
+    for (const psm of psmModes) {
+      try {
+        await worker.setParameters({
+          tessedit_pageseg_mode: Number(psm),
+          preserve_interword_spaces: "1",
+        });
+        const result = await worker.recognize(imageBuffer);
+        const candidateText = normalizeText(result && result.data ? result.data.text : "");
+        if (!candidateText) continue;
+        candidates.push({
+          text: candidateText,
+          score: scoreOcrText(candidateText),
+          psm,
+          label: `${labelPrefix}-psm${psm}`,
+        });
+      } catch (error) {
+        warnings.push(`${labelPrefix}_ocr_failed`);
+      }
+    }
+  } finally {
+    await worker.terminate().catch(() => {});
+  }
+
+  return dedupeOcrCandidates(candidates);
+}
+
+async function renderPdfPageAsImageWithJs(pdfBuffer, pageNumber, warnings) {
+  try {
+    const { renderPageAsImage } = await import("unpdf");
+    const rendered = await renderPageAsImage(new Uint8Array(pdfBuffer), pageNumber, {
+      canvasImport: () => import("@napi-rs/canvas"),
+      scale: OCR_JS_RENDER_SCALE,
+    });
+    return Buffer.from(rendered);
+  } catch (error) {
+    warnings.push("pdf_js_render_failed");
+    return null;
+  }
+}
+
+async function extractTextFromPdfOcrJs(pdfBuffer) {
+  const warnings = [];
+  const allCandidates = [];
+  const psmModes = ["3", "4", "6"];
+
+  for (let page = 1; page <= OCR_JS_MAX_PAGES; page += 1) {
+    const imageBuffer = await renderPdfPageAsImageWithJs(pdfBuffer, page, warnings);
+    if (!imageBuffer) continue;
+    const pageCandidates = await runImageBufferOcrWithTesseractJs(
+      imageBuffer,
+      psmModes,
+      warnings,
+      `pdfjs_page${page}`
+    );
+    pageCandidates.forEach((candidate) => {
+      allCandidates.push({
+        ...candidate,
+        label: `pdfjs-page${page}-psm${candidate.psm}`,
+      });
+    });
+  }
+
+  const uniqueByText = dedupeOcrCandidates(allCandidates);
+  const best = uniqueByText[0];
+  if (!best || !best.text) warnings.push("pdf_ocr_js_empty");
+  return {
+    text: best ? best.text : "",
+    candidates: uniqueByText.slice(0, 12).map((candidate) => ({
+      text: candidate.text,
+      label: candidate.label,
+      score: candidate.score,
+    })),
+    warnings,
+  };
+}
+
+function extractTextFromOpenAiResponsePayload(payload) {
+  if (!payload) return "";
+  if (typeof payload.output_text === "string" && payload.output_text.trim()) {
+    return payload.output_text.trim();
+  }
+  const output = Array.isArray(payload.output) ? payload.output : [];
+  const chunks = [];
+  output.forEach((entry) => {
+    const content = Array.isArray(entry && entry.content) ? entry.content : [];
+    content.forEach((block) => {
+      if (!block) return;
+      if (typeof block.text === "string" && block.text.trim()) {
+        chunks.push(block.text.trim());
+      }
+      if (
+        block.type === "output_text" &&
+        typeof block.text === "string" &&
+        block.text.trim()
+      ) {
+        chunks.push(block.text.trim());
+      }
+    });
+  });
+  return normalizeText(chunks.join("\n"));
+}
+
+async function extractTextFromPdfOcrOpenAi(pdfBuffer, options = {}) {
+  const warnings = [];
+  if (!OCR_OPENAI_FALLBACK_ENABLED) return { text: "", warnings };
+  if (!OCR_OPENAI_API_KEY) {
+    warnings.push("pdf_ocr_openai_not_configured");
+    return { text: "", warnings };
+  }
+
+  const payload = {
+    model: OCR_OPENAI_MODEL,
+    input: [
+      {
+        role: "user",
+        content: [
+          {
+            type: "input_text",
+            text:
+              "Extract all visible text from this PDF as plain text. Preserve line breaks and reading order. Return only the extracted text.",
+          },
+          {
+            type: "input_file",
+            filename: String(options.fileName || "document.pdf"),
+            file_data: pdfBuffer.toString("base64"),
+          },
+        ],
+      },
+    ],
+    max_output_tokens: 6000,
+  };
+
+  let response;
+  try {
+    response = await fetch(`${OCR_OPENAI_BASE_URL}/responses`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${OCR_OPENAI_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+  } catch (error) {
+    warnings.push("pdf_ocr_openai_request_failed");
+    return { text: "", warnings };
+  }
+
+  if (!response || !response.ok) {
+    warnings.push("pdf_ocr_openai_failed");
+    return { text: "", warnings };
+  }
+
+  let json;
+  try {
+    json = await response.json();
+  } catch (error) {
+    warnings.push("pdf_ocr_openai_invalid_response");
+    return { text: "", warnings };
+  }
+
+  const text = normalizeText(extractTextFromOpenAiResponsePayload(json));
+  if (!text) {
+    warnings.push("pdf_ocr_openai_empty");
+    return { text: "", warnings };
+  }
+
+  return { text, warnings };
+}
+
+async function extractTextFromPdfOcrSpace(pdfBuffer, options = {}) {
+  const warnings = [];
+  if (!OCR_SPACE_FALLBACK_ENABLED) return { text: "", warnings };
+  if (!OCR_SPACE_API_KEY) {
+    warnings.push("pdf_ocr_ocrspace_not_configured");
+    return { text: "", warnings };
+  }
+  if (
+    typeof globalThis.fetch !== "function" ||
+    typeof globalThis.FormData === "undefined" ||
+    typeof globalThis.Blob === "undefined"
+  ) {
+    warnings.push("pdf_ocr_ocrspace_runtime_unsupported");
+    return { text: "", warnings };
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), OCR_SPACE_TIMEOUT_MS);
+
+  try {
+    const form = new FormData();
+    form.append("apikey", OCR_SPACE_API_KEY);
+    form.append("language", OCR_SPACE_LANGUAGE);
+    form.append("OCREngine", OCR_SPACE_ENGINE);
+    form.append("isTable", "true");
+    form.append("scale", "true");
+    form.append("isCreateSearchablePdf", "false");
+    form.append(
+      "file",
+      new Blob([pdfBuffer], { type: "application/pdf" }),
+      String(options.fileName || "document.pdf")
+    );
+
+    const response = await globalThis.fetch(OCR_SPACE_ENDPOINT, {
+      method: "POST",
+      body: form,
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      warnings.push("pdf_ocr_ocrspace_failed");
+      return { text: "", warnings };
+    }
+
+    let payload;
+    try {
+      payload = await response.json();
+    } catch (error) {
+      warnings.push("pdf_ocr_ocrspace_invalid_response");
+      return { text: "", warnings };
+    }
+
+    const parsedResults = Array.isArray(payload && payload.ParsedResults)
+      ? payload.ParsedResults
+      : [];
+    const parsedText = normalizeText(
+      parsedResults
+        .map((result) => normalizeText(result && result.ParsedText))
+        .filter(Boolean)
+        .join("\n")
+    );
+
+    if (parsedText) {
+      return { text: parsedText, warnings };
+    }
+
+    if (payload && payload.IsErroredOnProcessing) {
+      warnings.push("pdf_ocr_ocrspace_processing_error");
+    } else {
+      warnings.push("pdf_ocr_ocrspace_empty");
+    }
+    return { text: "", warnings };
+  } catch (error) {
+    if (error && error.name === "AbortError") {
+      warnings.push("pdf_ocr_ocrspace_timeout");
+    } else {
+      warnings.push("pdf_ocr_ocrspace_request_failed");
+    }
+    return { text: "", warnings };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function extractTextFromPdfPdftotext(pdfBuffer) {
   if (!hasBinary("pdftotext")) return { text: "", warnings: [] };
   const warnings = [];
@@ -312,166 +629,224 @@ async function extractTextFromPdfPdftotext(pdfBuffer) {
   }
 }
 
-async function extractTextFromPdfOcr(pdfBuffer) {
+async function extractTextFromPdfOcr(pdfBuffer, options = {}) {
   const warnings = [];
-  if (!hasBinary("magick") || !hasBinary("tesseract")) {
-    warnings.push("pdf_ocr_dependencies_missing");
-    return { text: "", warnings };
-  }
+  const allCandidates = [];
+  const binaryDependenciesReady =
+    !OCR_FORCE_JS && hasBinary("magick") && hasBinary("tesseract");
 
-  const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "witco-po-"));
-  const pdfPath = path.join(tempDir, "upload.pdf");
+  if (binaryDependenciesReady) {
+    const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "witco-po-"));
+    const pdfPath = path.join(tempDir, "upload.pdf");
 
-  try {
-    await fs.promises.writeFile(pdfPath, pdfBuffer);
-    const pipelines = [
-      {
-        name: "default-300",
-        imageArgs: [
-          "-density",
-          "300",
-          "-background",
-          "white",
-          "-alpha",
-          "remove",
-          "-alpha",
-          "off",
-          "-colorspace",
-          "Gray",
-        ],
-      },
-      {
-        name: "enhanced-400",
-        imageArgs: [
-          "-density",
-          "400",
-          "-background",
-          "white",
-          "-alpha",
-          "remove",
-          "-alpha",
-          "off",
-          "-colorspace",
-          "Gray",
-          "-sharpen",
-          "0x1.0",
-          "-contrast-stretch",
-          "1%x1%",
-        ],
-      },
-      {
-        name: "table-crop-400",
-        imageArgs: [
-          "-density",
-          "400",
-          "-background",
-          "white",
-          "-alpha",
-          "remove",
-          "-alpha",
-          "off",
-          "-colorspace",
-          "Gray",
-          "-sharpen",
-          "0x1.0",
-          "-contrast-stretch",
-          "1%x1%",
-          "-crop",
-          "100%x45%+0+30%",
-          "+repage",
-        ],
-      },
-      {
-        name: "highres-upscale-500",
-        imageArgs: [
-          "-density",
-          "500",
-          "-background",
-          "white",
-          "-alpha",
-          "remove",
-          "-alpha",
-          "off",
-          "-colorspace",
-          "Gray",
-          "-resize",
-          "200%",
-          "-sharpen",
-          "0x1.2",
-          "-contrast-stretch",
-          "1%x1%",
-        ],
-      },
-    ];
-    const psmModes = ["3", "4", "6"];
-    const allCandidates = [];
+    try {
+      await fs.promises.writeFile(pdfPath, pdfBuffer);
+      const pipelines = [
+        {
+          name: "default-300",
+          imageArgs: [
+            "-density",
+            "300",
+            "-background",
+            "white",
+            "-alpha",
+            "remove",
+            "-alpha",
+            "off",
+            "-colorspace",
+            "Gray",
+          ],
+        },
+        {
+          name: "enhanced-400",
+          imageArgs: [
+            "-density",
+            "400",
+            "-background",
+            "white",
+            "-alpha",
+            "remove",
+            "-alpha",
+            "off",
+            "-colorspace",
+            "Gray",
+            "-sharpen",
+            "0x1.0",
+            "-contrast-stretch",
+            "1%x1%",
+          ],
+        },
+        {
+          name: "table-crop-400",
+          imageArgs: [
+            "-density",
+            "400",
+            "-background",
+            "white",
+            "-alpha",
+            "remove",
+            "-alpha",
+            "off",
+            "-colorspace",
+            "Gray",
+            "-sharpen",
+            "0x1.0",
+            "-contrast-stretch",
+            "1%x1%",
+            "-crop",
+            "100%x45%+0+30%",
+            "+repage",
+          ],
+        },
+        {
+          name: "highres-upscale-500",
+          imageArgs: [
+            "-density",
+            "500",
+            "-background",
+            "white",
+            "-alpha",
+            "remove",
+            "-alpha",
+            "off",
+            "-colorspace",
+            "Gray",
+            "-resize",
+            "200%",
+            "-sharpen",
+            "0x1.2",
+            "-contrast-stretch",
+            "1%x1%",
+          ],
+        },
+      ];
+      const psmModes = ["3", "4", "6"];
 
-    for (const pipeline of pipelines) {
-      const candidates = await runPdfOcrPipeline(
-        pdfPath,
-        pipeline.imageArgs,
-        psmModes,
-        warnings
-      );
-      candidates.forEach((candidate) => {
-        allCandidates.push({
-          ...candidate,
-          label: `${pipeline.name}-psm${candidate.psm}`,
-        });
-      });
-    }
-
-    if (hasBinary("pdftoppm")) {
-      const popplerPrefix = path.join(tempDir, "poppler-page");
-      const render = await runCommand(
-        "pdftoppm",
-        ["-f", "1", "-singlefile", "-png", pdfPath, popplerPrefix],
-        { timeoutMs: OCR_TIMEOUT_MS }
-      );
-      if (render.code === 0) {
-        const popplerImagePath = `${popplerPrefix}.png`;
-        const popplerCandidates = await runImagePathOcrPipeline(
-          popplerImagePath,
+      for (const pipeline of pipelines) {
+        const candidates = await runPdfOcrPipeline(
+          pdfPath,
+          pipeline.imageArgs,
           psmModes,
-          warnings,
-          "pdftoppm"
+          warnings
         );
-        popplerCandidates.forEach((candidate) => {
+        candidates.forEach((candidate) => {
           allCandidates.push({
             ...candidate,
-            label: `pdftoppm-psm${candidate.psm}`,
+            label: `${pipeline.name}-psm${candidate.psm}`,
           });
         });
-      } else {
-        warnings.push(render.timedOut ? "pdftoppm_timeout" : "pdftoppm_failed");
       }
+
+      if (hasBinary("pdftoppm")) {
+        const popplerPrefix = path.join(tempDir, "poppler-page");
+        const render = await runCommand(
+          "pdftoppm",
+          ["-f", "1", "-singlefile", "-png", pdfPath, popplerPrefix],
+          { timeoutMs: OCR_TIMEOUT_MS }
+        );
+        if (render.code === 0) {
+          const popplerImagePath = `${popplerPrefix}.png`;
+          const popplerCandidates = await runImagePathOcrPipeline(
+            popplerImagePath,
+            psmModes,
+            warnings,
+            "pdftoppm"
+          );
+          popplerCandidates.forEach((candidate) => {
+            allCandidates.push({
+              ...candidate,
+              label: `pdftoppm-psm${candidate.psm}`,
+            });
+          });
+        } else {
+          warnings.push(render.timedOut ? "pdftoppm_timeout" : "pdftoppm_failed");
+        }
+      }
+    } finally {
+      await fs.promises.rm(tempDir, { recursive: true, force: true }).catch(() => {});
     }
+  } else {
+    warnings.push("pdf_ocr_dependencies_missing");
+  }
 
-    if (!allCandidates.length) return { text: "", candidates: [], warnings };
+  if (OCR_JS_FALLBACK_ENABLED && (!allCandidates.length || OCR_FORCE_JS)) {
+    const jsResult = await extractTextFromPdfOcrJs(pdfBuffer);
+    if (jsResult.text || (jsResult.candidates || []).length) {
+      warnings.push("pdf_ocr_js_fallback_applied");
+      (jsResult.candidates || []).forEach((candidate) => allCandidates.push(candidate));
+    }
+    warnings.push(...(jsResult.warnings || []));
+  }
 
-    allCandidates.sort((a, b) => b.score - a.score);
-    const uniqueByText = [];
-    const seen = new Set();
-    allCandidates.forEach((candidate) => {
-      const key = candidate.text;
-      if (seen.has(key)) return;
-      seen.add(key);
-      uniqueByText.push(candidate);
-    });
+  if (OCR_SPACE_FALLBACK_ENABLED && !allCandidates.length) {
+    const ocrSpaceResult = await extractTextFromPdfOcrSpace(pdfBuffer, options);
+    if (ocrSpaceResult.text) {
+      warnings.push("pdf_ocr_ocrspace_applied");
+      allCandidates.push({
+        text: ocrSpaceResult.text,
+        score: scoreOcrText(ocrSpaceResult.text),
+        label: "ocrspace-pdf-ocr",
+      });
+    }
+    warnings.push(...(ocrSpaceResult.warnings || []));
+  }
 
-    const best = uniqueByText[0];
-    if (!best || !best.text) warnings.push("pdf_ocr_empty");
+  if (OCR_OPENAI_FALLBACK_ENABLED && !allCandidates.length) {
+    const openAiResult = await extractTextFromPdfOcrOpenAi(pdfBuffer, options);
+    if (openAiResult.text) {
+      warnings.push("pdf_ocr_openai_applied");
+      allCandidates.push({
+        text: openAiResult.text,
+        score: scoreOcrText(openAiResult.text),
+        label: "openai-pdf-ocr",
+      });
+    }
+    warnings.push(...(openAiResult.warnings || []));
+  }
+
+  const uniqueByText = dedupeOcrCandidates(allCandidates);
+  const best = uniqueByText[0];
+  if (!best || !best.text) warnings.push("pdf_ocr_empty");
+  return {
+    text: best ? best.text : "",
+    candidates: uniqueByText.slice(0, 12).map((candidate) => ({
+      text: candidate.text,
+      label: candidate.label,
+      score: candidate.score,
+    })),
+    warnings: [...new Set(warnings)],
+  };
+}
+
+async function extractTextFromImageOcr(imageBuffer) {
+  const warnings = [];
+  const candidates = await runImageBufferOcrWithTesseractJs(
+    imageBuffer,
+    ["3", "4", "6"],
+    warnings,
+    "image"
+  );
+  const best = candidates[0];
+  return {
+    text: best ? best.text : "",
+    candidates: candidates.slice(0, 6).map((candidate) => ({
+      text: candidate.text,
+      label: candidate.label,
+      score: candidate.score,
+    })),
+    warnings: [...new Set(warnings)],
+  };
+}
+
+async function extractTextFromImageOcrStrict(imageBuffer) {
+  try {
+    return await extractTextFromImageOcr(imageBuffer);
+  } catch (error) {
     return {
-      text: best ? best.text : "",
-      candidates: uniqueByText.slice(0, 12).map((candidate) => ({
-        text: candidate.text,
-        label: candidate.label,
-        score: candidate.score,
-      })),
-      warnings,
+      text: "",
+      candidates: [],
+      warnings: ["image_ocr_failed"],
     };
-  } finally {
-    await fs.promises.rm(tempDir, { recursive: true, force: true }).catch(() => {});
   }
 }
 
@@ -1407,6 +1782,8 @@ function parseCrCanonicalGoods(rawText, lines) {
   const hasL28Like = /\b(?:l28|l25|\(28|genta|centa|trousat)\b/i.test(source);
   const hasCoagulantLike = /\b(?:coagul|coupu?bs?nt|cragul|cokirors)\b/i.test(source);
   const quantityByItem = { "1": null, "2": null };
+  let hasItem1LineLike = false;
+  let hasItem2LineLike = false;
   const repeatedQtyMode = (() => {
     const votes = Array.from(
       source.matchAll(/\b(\d{1,3}(?:[.,]\d{1,4})?)\s*(?:pail|drum|pack|set|units?)\b/gi)
@@ -1438,6 +1815,12 @@ function parseCrCanonicalGoods(rawText, lines) {
     if (!itemMatch) return;
     const itemNo = itemMatch[1];
     const body = itemMatch[2] || "";
+    if (itemNo === "1" && /\b(a30|ecot|eco)\b/i.test(body)) {
+      hasItem1LineLike = true;
+    }
+    if (itemNo === "2" && /\b(l28|coagul|ecot|eco)\b/i.test(body)) {
+      hasItem2LineLike = true;
+    }
     if (itemNo === "1" && !/\b(a30|ecot|eco)\b/i.test(body)) return;
     if (itemNo === "2" && !/\b(l28|coagul|ecot|eco)\b/i.test(body)) return;
     const quantity = extractQuantityFromItemStart(body);
@@ -1447,7 +1830,7 @@ function parseCrCanonicalGoods(rawText, lines) {
   });
 
   const goods = [];
-  if (hasA30Like && hasTinLike && hasTwentyFive) {
+  if ((hasA30Like || hasItem1LineLike) && hasTinLike && hasTwentyFive) {
     const qty =
       quantityByItem["1"] ||
       extractQtyNearToken("a30|ecotreat\\s+a30") ||
@@ -1463,7 +1846,12 @@ function parseCrCanonicalGoods(rawText, lines) {
       })
     );
   }
-  if (hasL28Like && hasCoagulantLike && hasTinLike && hasTwentyFive) {
+  if (
+    (hasL28Like || hasItem2LineLike) &&
+    (hasCoagulantLike || hasItem2LineLike) &&
+    hasTinLike &&
+    hasTwentyFive
+  ) {
     const qty =
       quantityByItem["2"] ||
       extractQtyNearToken("l28|coagulant|ecotreat\\s+l28") ||
@@ -3304,7 +3692,9 @@ exports.parseDocument = [
         text = pdfParseText;
       }
       if (normalizeText(text).length < MIN_EXTRACTABLE_TEXT_LENGTH) {
-        const ocr = await extractTextFromPdfOcr(req.file.buffer);
+        const ocr = await extractTextFromPdfOcr(req.file.buffer, {
+          fileName: name,
+        });
         parsingWarnings.push(...(ocr.warnings || []));
         const ocrCandidates = [
           ...(Array.isArray(ocr.candidates) ? ocr.candidates : []),
@@ -3328,14 +3718,16 @@ exports.parseDocument = [
         parsingWarnings.push("upload_image_for_ocr");
       }
     } else if (isImage) {
-      const worker = await createWorker("eng");
-      try {
-        const result = await worker.recognize(req.file.buffer);
-        text = (result && result.data && result.data.text) || "";
-      } finally {
-        await worker.terminate();
-      }
-      addParseCandidate(text, "image-ocr");
+      const imageOcr = await extractTextFromImageOcrStrict(req.file.buffer);
+      parsingWarnings.push(...(imageOcr.warnings || []));
+      const imageCandidates = [
+        ...(Array.isArray(imageOcr.candidates) ? imageOcr.candidates : []),
+        ...(imageOcr.text ? [{ text: imageOcr.text, label: "image-ocr-best" }] : []),
+      ];
+      imageCandidates.forEach((candidate) => {
+        addParseCandidate(candidate.text || "", candidate.label || "image-ocr");
+      });
+      text = imageOcr.text || "";
     }
 
     if (!parseCandidates.length) {

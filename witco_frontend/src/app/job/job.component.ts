@@ -524,22 +524,26 @@ export class JobComponent implements OnInit,AfterViewInit {
   }
 
   setForm(data:any){
+    const phoneRaw = String(data.phone || '');
+    const phoneDigits = phoneRaw.replace(/\D/g, '');
+    const localPhone = phoneDigits.length >= 8 ? phoneDigits.slice(-8) : '';
     const deliveryAddress = data.deliveryAddress || data.address || '';
+    const hasPersistedCustomer = !!data._id && !data.fromHistory;
     this.customerForm.patchValue({
-      firstName: data.firstName,
-      lastName: data.lastName,
-      companyName: data.companyName,
-      email: data.email,
-      code:data.phone.slice(0,3),
-      phone: data.phone.slice(3,),
-      address: data.address,
+      firstName: data.firstName || '',
+      lastName: data.lastName || '',
+      companyName: data.companyName || '',
+      email: data.email || null,
+      code: '+65',
+      phone: localPhone,
+      address: data.address || '',
       deliveryAddress,
-      userRole: data.userRole
+      userRole: data.userRole || 'customer'
     });
-    this.customer_id= data._id;
+    this.customer_id = hasPersistedCustomer ? data._id : '';
     this.filteredItems = [];
     this.searchTerm =''
-    this.searchCustomer = true;
+    this.searchCustomer = hasPersistedCustomer;
     this.saveCustomerDetails= false
   }
 }
