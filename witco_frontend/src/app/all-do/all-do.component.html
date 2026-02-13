@@ -2,7 +2,7 @@
     <div class="page-header">
         <h5 class="page-title">Delivery Orders</h5>
     </div>
-    <div class="form-toolbar">
+    <div class="form-toolbar form-toolbar--filters">
         <mat-form-field appearance="outline">
             <mat-label>DO Number</mat-label>
             <input
@@ -48,7 +48,7 @@
             <mat-datepicker-toggle matSuffix [for]="outTimeCalendar"></mat-datepicker-toggle>
             <mat-datepicker #outTimeCalendar></mat-datepicker>
         </mat-form-field>  
-        <div class="toolbar-actions">
+        <div class="toolbar-actions toolbar-actions--top">
             <button
                 class="search-btn"
                 mat-flat-button
@@ -80,7 +80,7 @@
     </div>
 </mat-card>
 <mat-card class="page-card sort-bar">
-    <div class="form-toolbar">
+    <div class="form-toolbar form-toolbar--sort">
         <mat-form-field appearance="outline">
             <mat-label>Sort By</mat-label>
             <mat-select [(ngModel)]="sortField" (selectionChange)="searchJobs()">
@@ -104,7 +104,7 @@
             <mat-label>Search Value</mat-label>
             <input matInput [(ngModel)]="searchValue" placeholder="Search">
         </mat-form-field>
-        <div class="toolbar-actions">
+        <div class="toolbar-actions toolbar-actions--bottom">
             <button
                 class="search-btn"
                 mat-flat-button
