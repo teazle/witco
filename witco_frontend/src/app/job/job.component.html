@@ -84,14 +84,9 @@
                 </div>
                 <div class="draft-actions">
                     <button mat-raised-button color="primary" type="button" (click)="applyDraft()">Apply Draft</button>
-                    <button mat-button type="button" (click)="discardDraft()">Discard</button>
+                    <button mat-stroked-button class="draft-actions__discard" type="button" (click)="discardDraft()">Discard</button>
                 </div>
             </div>
-            <mat-chip-list *ngIf="parseWarnings.length">
-                <mat-chip color="warn" selected *ngFor="let warning of parseWarnings">
-                    {{warning}}
-                </mat-chip>
-            </mat-chip-list>
         </div>
     </div>
         <mat-horizontal-stepper #stepper class="job-stepper" linear>

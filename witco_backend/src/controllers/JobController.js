@@ -2339,6 +2339,19 @@ function extractCrProjectAddressFromText(text) {
   return isAddressLike(candidate) ? candidate : "";
 }
 
+function isClearlyInvalidDeliveryAddress(value) {
+  const text = normalizeDeliveryAddressValue(value);
+  if (!text) return true;
+  if (
+    /\b(?:for\s+office\s+use|do\s*no\.?|inv\s*no\.?|invoice\s*no\.?|po\s*close|page\s*no\.?)\b/i.test(
+      text
+    )
+  ) {
+    return true;
+  }
+  return false;
+}
+
 function inferCrDeliveryFromCandidates(parseCandidates) {
   if (!Array.isArray(parseCandidates) || !parseCandidates.length) return "";
   const hits = parseCandidates
@@ -3759,9 +3772,17 @@ exports.parseDocument = [
       }
     }
     parsed.deliveryAddress = normalizeDeliveryAddressValue(parsed.deliveryAddress || "");
-    if (!parsed.deliveryAddress && String(parsed.template || "") === "CR") {
+    if (String(parsed.template || "") === "CR") {
       const inferredCrDelivery = inferCrDeliveryFromCandidates(parseCandidates);
-      if (inferredCrDelivery) {
+      if (
+        inferredCrDelivery &&
+        (
+          !parsed.deliveryAddress ||
+          isClearlyInvalidDeliveryAddress(parsed.deliveryAddress) ||
+          !isAddressLike(parsed.deliveryAddress) ||
+          scoreAddressBlock([inferredCrDelivery]) >= scoreAddressBlock([parsed.deliveryAddress]) + 1
+        )
+      ) {
         parsed.deliveryAddress = inferredCrDelivery;
         parsed.warnings = (parsed.warnings || []).filter(
           (warning) => warning !== "deliveryAddress_not_found"
