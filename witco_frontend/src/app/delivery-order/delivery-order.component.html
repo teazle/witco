@@ -12,7 +12,7 @@
       <mat-datepicker-toggle matSuffix [for]="outTimeCalendar"></mat-datepicker-toggle>
       <mat-datepicker #outTimeCalendar></mat-datepicker>
     </mat-form-field>
-    <div class="toolbar-actions">
+    <div class="toolbar-actions toolbar-actions--date">
       <button class="search-btn" mat-flat-button color="warn" type="button" (click)="searchJobs()" [disabled]="!fromDate || !toDate">
         Search
       </button>

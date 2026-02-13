@@ -6,7 +6,7 @@ const path = require("path");
 const AppError = require("../utils/AppError");
 
 const s3 = require("../utils/awsconfig");
-const { blobPut, isBlobEnabled } = require("../utils/blob");
+const { blobHead, blobPut, isBlobEnabled } = require("../utils/blob");
 
 async function uploadImage(base64String, pathname, mime) {
   const fileName = path.basename(pathname);
@@ -94,4 +94,35 @@ exports.imageuploader = catchAsync(async (req, res) => {
     await job.save();
     res.status(201).json({message:"done", storage: result});
   });
+
+exports.getFile = catchAsync(async (req, res) => {
+  const rawPath = String(req.query.path || "").trim();
+  const normalizedPath = path.posix.normalize(rawPath.replace(/^\/+/, ""));
+
+  if (!normalizedPath || !normalizedPath.startsWith("uploads/")) {
+    throw new AppError("Invalid file path", 400);
+  }
+
+  if (isBlobEnabled()) {
+    const meta = await blobHead(normalizedPath);
+    if (meta && meta.url) {
+      return res.redirect(302, meta.url);
+    }
+  }
+
+  if (s3) {
+    const signedUrl = s3.getSignedUrl("getObject", {
+      Bucket: "witco",
+      Key: normalizedPath,
+      Expires: 60,
+    });
+    return res.redirect(302, signedUrl);
+  }
+
+  const localFilePath = path.join(__dirname, "..", "..", normalizedPath);
+  if (!fs.existsSync(localFilePath)) {
+    throw new AppError("File not found", 404);
+  }
+  return res.sendFile(localFilePath);
+});
 

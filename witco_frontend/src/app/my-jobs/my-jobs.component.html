@@ -29,6 +29,12 @@
                         Submit Delivery
                     </button>
 
+                    <button *ngIf="router.url.includes('Delivered')" mat-stroked-button type="button"
+                        (click)="showProofSign(proofSign, element)">
+                        <mat-icon>image</mat-icon>
+                        View Proof & Sign
+                    </button>
+
                     <div *ngIf="router.url.includes('Delivered')" class="done-pill">
                         <mat-icon>done</mat-icon>
                         Completed
@@ -48,6 +54,36 @@
                             <mat-icon class="location">location_on</mat-icon>
                         </button>
                         <button mat-button mat-dialog-close cdkFocusInitial color="primary">Ok</button>
+                    </div>
+                </ng-template>
+
+                <ng-template #proofSign class="address-model">
+                    <h1 mat-dialog-title class="text-center">Collected Proof</h1>
+                    <mat-divider></mat-divider>
+                    <div mat-dialog-content class="proof-dialog">
+                        <div class="proof-panel">
+                            <h3>Signature</h3>
+                            <img *ngIf="selectedSignImage; else noSign" [src]="selectedSignImage" alt="Signature" class="proof-dialog__img">
+                            <ng-template #noSign>
+                                <p class="proof-dialog__empty">No signature found.</p>
+                            </ng-template>
+                        </div>
+
+                        <div class="proof-panel">
+                            <h3>Proof Photos ({{selectedProofImages.length}})</h3>
+                            <div class="proof-dialog__grid" *ngIf="selectedProofImages.length; else noProof">
+                                <img *ngFor="let proof of selectedProofImages; let idx=index"
+                                    [src]="proof"
+                                    [alt]="'Proof photo ' + (idx + 1)"
+                                    class="proof-dialog__img">
+                            </div>
+                            <ng-template #noProof>
+                                <p class="proof-dialog__empty">No proof photos found.</p>
+                            </ng-template>
+                        </div>
+                    </div>
+                    <div mat-dialog-actions class="btn">
+                        <button mat-button mat-dialog-close cdkFocusInitial color="primary">Close</button>
                     </div>
                 </ng-template>
             </div>

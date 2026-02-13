@@ -58,6 +58,28 @@
         </div>
     </mat-card-content>
 
+    <mat-card-content class="content-wrap media-wrap">
+        <div class="section-heading">Collected Proof</div>
+        <div class="media-grid">
+            <div class="media-panel">
+                <div class="media-title">Signature</div>
+                <img *ngIf="signImageUrl; else noSignature" [src]="signImageUrl" alt="Signature" class="proof-img">
+                <ng-template #noSignature>
+                    <div class="media-empty">No signature yet.</div>
+                </ng-template>
+            </div>
+            <div class="media-panel">
+                <div class="media-title">Proof Photos ({{proofImageUrls.length}})</div>
+                <div class="proof-list" *ngIf="proofImageUrls.length; else noProofPhoto">
+                    <img *ngFor="let proof of proofImageUrls; let i=index" [src]="proof" [alt]="'Proof photo ' + (i + 1)" class="proof-img">
+                </div>
+                <ng-template #noProofPhoto>
+                    <div class="media-empty">No proof photo yet.</div>
+                </ng-template>
+            </div>
+        </div>
+    </mat-card-content>
+
     <!-- <mat-card-content>
         <h4>Payment Details</h4>
         <mat-radio-group [(ngModel)]="selectedOption" (change)="ChangepaymentMethod($event)" class="paymentBtn">

@@ -17,6 +17,8 @@ export class DeliverySubmitComponent implements OnInit {
   goodsDetails:any;
   checksign:boolean=true;
   checkproof:boolean=true;
+  signImageUrl = '';
+  proofImageUrls: string[] = [];
   displayedColumns: string[] = ['sr','name', 'quantity'];
 
   dataSource =new MatTableDataSource<any>([]);
@@ -54,6 +56,7 @@ getjob(id:any){
       this.goodsDetails= response.data;
       this.checksign = !Boolean(this.jobDetails && this.jobDetails.sign);
       this.checkproof = !this.hasProofPhotos(this.jobDetails);
+      this.setCollectedMedia(this.jobDetails);
       this.authService.setLoader(false);
     })
   })
@@ -68,6 +71,35 @@ private hasProofPhotos(job: any): boolean {
     }
   }
   return Boolean(job.photo_proof);
+}
+
+private setCollectedMedia(job: any) {
+  this.signImageUrl = this.resolveUploadUrl(job && job.sign ? job.sign : '');
+  const proofPaths = this.getProofPaths(job);
+  this.proofImageUrls = proofPaths
+    .map((item) => this.resolveUploadUrl(item))
+    .filter((item) => Boolean(item));
+}
+
+private getProofPaths(job: any): string[] {
+  if (!job) return [];
+  if (Array.isArray(job.photo_proof_images)) {
+    const photos = job.photo_proof_images.filter((item: any) => Boolean(item));
+    if (photos.length > 0) {
+      return photos;
+    }
+  }
+  return job.photo_proof ? [job.photo_proof] : [];
+}
+
+private resolveUploadUrl(filePath: string): string {
+  const raw = String(filePath || '').trim();
+  if (!raw) return '';
+  if (raw.startsWith('http://') || raw.startsWith('https://')) {
+    return raw;
+  }
+  const normalizedPath = raw.replace(/^\/+/, '');
+  return `${this.authService.baseUrl}upload/file?path=${encodeURIComponent(normalizedPath)}`;
 }
 
 sign(){

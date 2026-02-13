@@ -20,6 +20,8 @@ export class MyJobsComponent implements OnInit {
   pageSizeOptions: number[] = [5, 10, 15, 50];
   displayedColumns: string[] = ['srno','customer', 'invoiceNumber', 'deliveryAddress','action'];
   currentRoute:any;
+  selectedSignImage = '';
+  selectedProofImages: string[] = [];
   constructor(
     private authService: AuthService,
     private toastService: ToastrService,
@@ -77,6 +79,13 @@ export class MyJobsComponent implements OnInit {
   showAddress(model){
     this.model.open(model)
   }
+  showProofSign(model: any, job: any) {
+    this.selectedSignImage = this.resolveUploadUrl(job && job.sign ? job.sign : '');
+    this.selectedProofImages = this.getProofPaths(job)
+      .map((item) => this.resolveUploadUrl(item))
+      .filter((item) => Boolean(item));
+    this.model.open(model);
+  }
   profile(){
     this.router.navigate(['/Userprofile']);
   }
@@ -87,5 +96,26 @@ export class MyJobsComponent implements OnInit {
     
     // let url = `https://www.google.com/maps/search/${zipcode}`+' '+'singapore';
     // window.open(url, '_blank');
+  }
+
+  private getProofPaths(job: any): string[] {
+    if (!job) return [];
+    if (Array.isArray(job.photo_proof_images)) {
+      const photos = job.photo_proof_images.filter((item: any) => Boolean(item));
+      if (photos.length > 0) {
+        return photos;
+      }
+    }
+    return job.photo_proof ? [job.photo_proof] : [];
+  }
+
+  private resolveUploadUrl(filePath: string): string {
+    const raw = String(filePath || '').trim();
+    if (!raw) return '';
+    if (raw.startsWith('http://') || raw.startsWith('https://')) {
+      return raw;
+    }
+    const normalizedPath = raw.replace(/^\/+/, '');
+    return `${this.authService.baseUrl}upload/file?path=${encodeURIComponent(normalizedPath)}`;
   }
 }

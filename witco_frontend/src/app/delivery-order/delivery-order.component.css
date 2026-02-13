@@ -1,5 +1,30 @@
 .date-toolbar {
-  align-items: end;
+  grid-template-columns: repeat(2, minmax(220px, 1fr)) minmax(260px, 300px);
+  align-items: center;
+}
+
+.date-toolbar .toolbar-actions--date {
+  justify-content: center;
+  align-items: center;
+  align-self: center;
+  white-space: nowrap;
+  height: 56px;
+}
+
+.date-toolbar .toolbar-actions--date .mat-flat-button {
+  min-width: 122px;
+  min-height: 56px;
+  padding: 0 20px;
+  font-size: 22px;
+  line-height: 1;
+}
+
+:host ::ng-deep .date-toolbar .mat-form-field-wrapper {
+  padding-bottom: 0 !important;
+}
+
+:host ::ng-deep .date-toolbar .mat-form-field-subscript-wrapper {
+  display: none !important;
 }
 
 .board-toolbar-card {
@@ -148,6 +173,10 @@
 }
 
 @media only screen and (max-width: 1099px) {
+  .date-toolbar {
+    grid-template-columns: repeat(2, minmax(180px, 1fr)) minmax(230px, 270px);
+  }
+
   .board-toolbar__controls {
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   }
@@ -158,6 +187,21 @@
 }
 
 @media only screen and (max-width: 767px) {
+  .date-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .date-toolbar .toolbar-actions--date {
+    justify-content: flex-start;
+    height: auto;
+  }
+
+  .date-toolbar .toolbar-actions--date .mat-flat-button {
+    min-width: 110px;
+    min-height: 52px;
+    font-size: 20px;
+  }
+
   .column {
     min-width: 240px;
     max-width: 280px;

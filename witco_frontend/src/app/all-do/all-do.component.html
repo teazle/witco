@@ -74,8 +74,8 @@
 <mat-card class="page-card">
     <div class="content-wrap toggle-wrap">
         <mat-button-toggle-group name="fontStyle" class="toggle" aria-label="Font Style" [value]="selectedVal" [(ngModel)]="selectedVal">
-            <mat-button-toggle value="Delivering" (click)="deliveringOrder()">Delivering</mat-button-toggle>
-            <mat-button-toggle value="Delivered" (click)="delivered()">Delivered</mat-button-toggle>
+            <mat-button-toggle [disableRipple]="true" value="Delivering" (click)="deliveringOrder()">Delivering</mat-button-toggle>
+            <mat-button-toggle [disableRipple]="true" value="Delivered" (click)="delivered()">Delivered</mat-button-toggle>
         </mat-button-toggle-group>
     </div>
 </mat-card>

@@ -106,6 +106,49 @@
     word-break: break-all;
 }
 
+.media-wrap {
+    border-top: 1px solid hsl(var(--border));
+}
+
+.media-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+}
+
+.media-panel {
+    border: 1px solid hsl(var(--border));
+    border-radius: 10px;
+    padding: 10px;
+    background: hsl(0 0% 100% / 0.96);
+}
+
+.media-title {
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.proof-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 8px;
+}
+
+.proof-img {
+    width: 100%;
+    max-height: 190px;
+    object-fit: contain;
+    border: 1px solid hsl(var(--border) / 0.9);
+    border-radius: 8px;
+    background: #fff;
+}
+
+.media-empty {
+    font-size: 13px;
+    color: hsl(var(--text-medium));
+}
+
 @media (max-width: 767px) {
     .page-card {
         max-height: calc(100% - 84px) !important;

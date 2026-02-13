@@ -12,19 +12,26 @@
 
 .form-toolbar--filters,
 .form-toolbar--sort {
-    grid-template-columns: repeat(4, minmax(180px, 1fr)) auto;
+    grid-template-columns: repeat(4, minmax(180px, 1fr)) minmax(260px, 300px);
+    align-items: center;
 }
 
 .toolbar-actions--top,
 .toolbar-actions--bottom {
-    justify-content: flex-end;
-    align-self: end;
+    justify-content: center;
+    align-items: center;
+    align-self: center;
     white-space: nowrap;
+    height: 56px;
 }
 
 .toolbar-actions--top .mat-flat-button,
 .toolbar-actions--bottom .mat-flat-button {
-    min-width: 86px;
+    min-width: 122px;
+    min-height: 56px;
+    padding: 0 20px;
+    font-size: 22px;
+    line-height: 1;
 }
 
 .table-card .mat-header-cell {
@@ -65,6 +72,35 @@
 
 mat-button-toggle-group {
     border-radius: var(--radius-control);
+    overflow: hidden;
+}
+
+:host ::ng-deep .form-toolbar--filters .mat-form-field-wrapper,
+:host ::ng-deep .form-toolbar--sort .mat-form-field-wrapper {
+    padding-bottom: 0 !important;
+}
+
+:host ::ng-deep .form-toolbar--filters .mat-form-field-subscript-wrapper,
+:host ::ng-deep .form-toolbar--sort .mat-form-field-subscript-wrapper {
+    display: none !important;
+}
+
+:host ::ng-deep .toggle .mat-button-toggle-focus-overlay {
+    opacity: 0 !important;
+    display: none !important;
+}
+
+:host ::ng-deep .toggle .mat-button-toggle:hover {
+    background-color: hsl(var(--primary-soft));
+}
+
+:host ::ng-deep .toggle .mat-button-toggle.mat-button-toggle-checked:hover {
+    background-color: hsl(var(--primary)) !important;
+    color: #fff;
+}
+
+:host ::ng-deep .toggle .mat-button-toggle-ripple {
+    display: none !important;
 }
 
 mat-form-field.invoice {
@@ -128,12 +164,12 @@ mat-icon {
 @media only screen and (max-width: 1365px) {
     .form-toolbar--filters,
     .form-toolbar--sort {
-        grid-template-columns: repeat(3, minmax(180px, 1fr));
+        grid-template-columns: repeat(3, minmax(180px, 1fr)) minmax(240px, 280px);
     }
 
     .toolbar-actions--top,
     .toolbar-actions--bottom {
-        justify-content: flex-start;
+        justify-content: center;
     }
 
     .r-30 {
@@ -156,7 +192,7 @@ mat-icon {
 @media only screen and (max-width: 1099px) {
     .form-toolbar--filters,
     .form-toolbar--sort {
-        grid-template-columns: repeat(2, minmax(170px, 1fr));
+        grid-template-columns: repeat(2, minmax(170px, 1fr)) minmax(230px, 270px);
     }
 
     .table-shell {
@@ -193,6 +229,14 @@ mat-icon {
     .toolbar-actions--top,
     .toolbar-actions--bottom {
         justify-content: flex-start;
+        height: auto;
+    }
+
+    .toolbar-actions--top .mat-flat-button,
+    .toolbar-actions--bottom .mat-flat-button {
+        min-width: 110px;
+        min-height: 52px;
+        font-size: 20px;
     }
 
     mat-form-field.invoice {
