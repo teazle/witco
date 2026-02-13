@@ -53,6 +53,7 @@ const JobSchema = new mongoose.Schema(
     },
     sign: { type: String, default: "" },
     photo_proof: { type: String, default: "" },
+    photo_proof_images: { type: [String], default: [] },
     // driver_id: {
     //   type: mongoose.Schema.ObjectId,
     //   ref: "users",

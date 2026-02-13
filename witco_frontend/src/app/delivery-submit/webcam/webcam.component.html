@@ -3,14 +3,16 @@
 
         <div style="text-align:center">
             <div>
+            <p class="photo-count">Saved proof photos: {{savedPhotoCount}}</p>
             <webcam [trigger]="triggerObservable" (imageCapture)="handleImage($event)" [width]="350"
             [height]="360"></webcam>
             <br/>
             <div class="btn-group">
                 <button (click)="triggerSnapshot()">Take A Photo</button>
-                <button (click)="save()" [disabled]="!checkPhoto">save</button>
+                <button (click)="save()" [disabled]="!checkPhoto || isSaving">save</button>
                 <button (click)="back()">back</button>
             </div>
+            <p class="photo-hint">First photo is required. You can save more photos if needed.</p>
         </div>
     </div>
 

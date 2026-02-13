@@ -254,6 +254,40 @@ async function runPdfOcrPipeline(pdfPath, imageArgs, psmModes, warnings) {
   return candidates;
 }
 
+async function runImagePathOcrPipeline(imagePath, psmModes, warnings, labelPrefix) {
+  const candidates = [];
+  for (const psm of psmModes) {
+    const ocr = await runCommand(
+      "tesseract",
+      [
+        imagePath,
+        "stdout",
+        "-l",
+        "eng",
+        "--oem",
+        "1",
+        "--psm",
+        psm,
+        "-c",
+        "preserve_interword_spaces=1",
+      ],
+      { timeoutMs: OCR_TIMEOUT_MS }
+    );
+    if (ocr.code !== 0) {
+      warnings.push(ocr.timedOut ? `${labelPrefix}_ocr_timeout` : `${labelPrefix}_ocr_failed`);
+      continue;
+    }
+    const candidateText = normalizeText(ocr.stdout.toString("utf8"));
+    if (!candidateText) continue;
+    candidates.push({
+      text: candidateText,
+      score: scoreOcrText(candidateText),
+      psm,
+    });
+  }
+  return candidates;
+}
+
 async function extractTextFromPdfPdftotext(pdfBuffer) {
   if (!hasBinary("pdftotext")) return { text: "", warnings: [] };
   const warnings = [];
@@ -387,6 +421,32 @@ async function extractTextFromPdfOcr(pdfBuffer) {
       });
     }
 
+    if (hasBinary("pdftoppm")) {
+      const popplerPrefix = path.join(tempDir, "poppler-page");
+      const render = await runCommand(
+        "pdftoppm",
+        ["-f", "1", "-singlefile", "-png", pdfPath, popplerPrefix],
+        { timeoutMs: OCR_TIMEOUT_MS }
+      );
+      if (render.code === 0) {
+        const popplerImagePath = `${popplerPrefix}.png`;
+        const popplerCandidates = await runImagePathOcrPipeline(
+          popplerImagePath,
+          psmModes,
+          warnings,
+          "pdftoppm"
+        );
+        popplerCandidates.forEach((candidate) => {
+          allCandidates.push({
+            ...candidate,
+            label: `pdftoppm-psm${candidate.psm}`,
+          });
+        });
+      } else {
+        warnings.push(render.timedOut ? "pdftoppm_timeout" : "pdftoppm_failed");
+      }
+    }
+
     if (!allCandidates.length) return { text: "", candidates: [], warnings };
 
     allCandidates.sort((a, b) => b.score - a.score);
@@ -403,7 +463,7 @@ async function extractTextFromPdfOcr(pdfBuffer) {
     if (!best || !best.text) warnings.push("pdf_ocr_empty");
     return {
       text: best ? best.text : "",
-      candidates: uniqueByText.slice(0, 6).map((candidate) => ({
+      candidates: uniqueByText.slice(0, 12).map((candidate) => ({
         text: candidate.text,
         label: candidate.label,
         score: candidate.score,
@@ -460,6 +520,13 @@ function isLikelyIdentifier(value) {
   if (!/^[A-Z0-9][A-Z0-9/-]*$/.test(value)) return false;
   if (IDENTIFIER_TOKEN_STOPLIST.has(value)) return false;
   return true;
+}
+
+function isWeakIdentifier(value) {
+  const cleaned = cleanIdentifier(value);
+  if (!cleaned) return true;
+  const letters = (cleaned.match(/[A-Z]/g) || []).length;
+  return cleaned.length < 6 || letters < 2;
 }
 
 function normalizeFilenameIdentifier(value) {
@@ -530,19 +597,47 @@ function cleanAddressValue(value) {
     .trim();
 }
 
+function trimAddressTail(value) {
+  return cleanAddressValue(value).replace(
+    /\b(delivery\s*date|delivery\s*time|date\s*require|contact\s*person|contact\s*no|attn(?:\s*to)?|tel|fax|page\s*no|payment\s*terms|gst|grand\s*total)\b.*$/i,
+    ""
+  ).trim();
+}
+
+function normalizeDeliveryAddressValue(value) {
+  let text = trimAddressTail(value);
+  if (!text) return "";
+  text = text
+    .replace(/\broadto\b/gi, "road to")
+    .replace(/\bEGP\b/gi, "ECP")
+    .replace(/\bExprec?away\b/gi, "Expressway")
+    .replace(/\b(BLK\s+\d{2,4})D\b/i, (_, prefix) => `${prefix}0`)
+    .replace(/\s+[:;,-]\s*(?:if|i|f)\s*$/i, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+  text = text.replace(/[|]+/g, " ").replace(/\s{2,}/g, " ").trim();
+  text = text.replace(/[,:;.\-]+$/, "").trim();
+  return text;
+}
+
 function isAddressLike(value) {
-  const text = cleanAddressValue(value);
+  const text = normalizeDeliveryAddressValue(value);
   if (!text || text.length < 8) return false;
   if (ADDRESS_STOP_WORDS.test(text)) return false;
+  if (/\b(delivery\s*date|payment\s*terms|grand\s*total|gst)\b/i.test(text)) return false;
   if (ZIP_SG.test(text) || ZIP_US.test(text)) return true;
   if (ADDRESS_HINT_WORDS.test(text)) return true;
-  return /\d/.test(text) && /[a-z]/i.test(text) && text.length >= 12;
+  if (!/\d/.test(text) || !/[a-z]/i.test(text) || text.length < 12) return false;
+  if (/\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday|jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)\b/i.test(text)) {
+    return false;
+  }
+  return /[,#]/.test(text);
 }
 
 function collectAddressBlock(lines, startIndex, maxLines = 3) {
   const block = [];
   for (let i = startIndex; i < lines.length && block.length < maxLines; i += 1) {
-    const line = cleanAddressValue(lines[i]);
+    const line = normalizeDeliveryAddressValue(lines[i]);
     if (!line) break;
     if (GOODS_STOP_WORDS.test(line) || ADDRESS_STOP_WORDS.test(line)) break;
     if (isAddressLike(line)) {
@@ -561,6 +656,10 @@ function scoreAddressBlock(block) {
   if (/\b(delivery|deliver|site)\b/i.test(text)) score += 2;
   if (ADDRESS_HINT_WORDS.test(text)) score += 2;
   if (text.length > 140) score -= 4;
+  const oddCharRatio = text.length
+    ? (text.match(/[^a-z0-9\s,./()#&:-]/gi) || []).length / text.length
+    : 1;
+  if (oddCharRatio > 0.08) score -= 4;
   score += Math.min(block.length, 3);
   return score;
 }
@@ -576,7 +675,7 @@ function extractDeliveryAddress(lines) {
     "Site Address",
   ];
   explicitLabels.forEach((label) => {
-    const block = extractInlineOrBlock(label, lines, 3).map(cleanAddressValue).filter(Boolean);
+    const block = extractInlineOrBlock(label, lines, 3).map(normalizeDeliveryAddressValue).filter(Boolean);
     if (block.length) candidates.push(block);
   });
 
@@ -584,6 +683,7 @@ function extractDeliveryAddress(lines) {
     /(delivery|detivery|delive|devry|delve|deliver).*(to|location|loca|lona|address|addr)|\bsite\b/i;
   lines.forEach((line, index) => {
     if (!fuzzyDeliveryRegex.test(line)) return;
+    if (/\bdelivery\s*date\b|\bdate\s*require\b/i.test(line)) return;
     const siteInline = cleanAddressValue(
       (line.match(/\bsite\b\s*[:\-]?\s*['"‘’]?\s*([A-Z0-9].+)$/i) || [])[1] || ""
     );
@@ -596,7 +696,7 @@ function extractDeliveryAddress(lines) {
       candidates.push([siteInline]);
       return;
     }
-    const inline = cleanAddressValue(line.split(/[:\-]/).slice(1).join(":"));
+    const inline = normalizeDeliveryAddressValue(line.split(/[:\-]/).slice(1).join(":"));
     if (isAddressLike(inline)) {
       candidates.push([inline]);
       return;
@@ -615,7 +715,7 @@ function extractDeliveryAddress(lines) {
       const block = [];
       const prev = collectAddressBlock(lines, Math.max(0, index - 2), 3);
       if (prev.length) block.push(...prev);
-      const current = cleanAddressValue(line);
+      const current = normalizeDeliveryAddressValue(line);
       if (isAddressLike(current)) block.push(current);
       if (block.length) {
         const deduped = Array.from(new Set(block)).slice(-3);
@@ -646,10 +746,14 @@ function toIntQuantity(value) {
 }
 
 function extractQuantityFromText(text) {
-  const qtyTagged = text.match(/\bqty(?:uantity)?\s*[:\-]?\s*(\d{1,3})\b/i);
+  const mergedFromPrice = text.match(
+    /\b1\s*pack\b[\s\S]{0,160}\b(?:quantity|quantdty|quatedy|quaritity|fuatedy)\b[^0-9a-z]{0,8}1([1-9])\s*(?:pack|tack|sack)\b/i
+  );
+  if (mergedFromPrice && mergedFromPrice[1]) return toIntQuantity(mergedFromPrice[1]);
+  const qtyTagged = text.match(/\bqty(?:uantity)?\s*[:\-]?\s*(\d{1,3}(?:[.,]\d{1,4})?)\b/i);
   if (qtyTagged && qtyTagged[1]) return toIntQuantity(qtyTagged[1]);
   const qtyNoisyTagged = text.match(
-    /\b(?:quantity|quantdty|quatedy|quaritity)\b[^0-9a-z]{0,12}(\d{1,3})\b/i
+    /\b(?:quantity|quantdty|quatedy|quaritity)\b[^0-9a-z]{0,12}(\d{1,3}(?:[.,]\d{1,4})?)\b/i
   );
   if (qtyNoisyTagged && qtyNoisyTagged[1]) return toIntQuantity(qtyNoisyTagged[1]);
   const qtyNoisyPack = text.match(/\b(?:quantity|quantdty|quatedy|quaritity)\b[^0-9a-z]{0,6}([0-9sS]{1,3})\s*pack\b/i);
@@ -744,15 +848,78 @@ function stripTabularColumnsFromItemStart(text) {
 
 function extractQuantityFromItemStart(text) {
   const line = normalizeLine(text).replace(/\|/g, " ");
-  const unitQuantity = line.match(
-    /\b(\d{1,3}(?:[.,]\d{1,3})?)\s*(?:x|pcs?|packs?|drums?|tins?|bags?|sacks?|sets?|units?|lot)\b/i
+  const normalizeNumeric = (token) => Number(String(token || "").replace(/,/g, ""));
+  let rawQuantity = null;
+
+  const unitMatches = Array.from(
+    line.matchAll(
+      /\b(\d{0,3}(?:[.,]\d{1,6})?)\s*(?:x|pcs?|packs?|drums?|tins?|bags?|sacks?|sets?|units?|lot|pail)\b/gi
+    )
   );
-  if (unitQuantity && unitQuantity[1]) return toIntQuantity(unitQuantity[1]);
-  const qtyColumn = line.match(
-    /\b(\d{1,3}(?:[.,]\d{1,3})?)\s*(?:tin|drum|pack|bag|set|pcs?|units?|lot|kg)\b/i
-  );
-  if (qtyColumn && qtyColumn[1]) return toIntQuantity(qtyColumn[1]);
-  return null;
+  for (let i = unitMatches.length - 1; i >= 0; i -= 1) {
+    const token = String(unitMatches[i][1] || "").trim();
+    if (!token || /^[.,]?0+$/.test(token)) continue;
+    const qty = toIntQuantity(token.startsWith(".") ? `0${token}` : token);
+    if (qty >= 1) {
+      rawQuantity = qty;
+      break;
+    }
+  }
+
+  if (!rawQuantity) {
+    const qtyColumnMatches = Array.from(
+      line.matchAll(/\b(\d{1,3}(?:[.,]\d{1,6})?)\s*(?:tin|drum|pack|bag|set|pcs?|units?|lot|pail)\b/gi)
+    );
+    for (let i = qtyColumnMatches.length - 1; i >= 0; i -= 1) {
+      const qty = toIntQuantity(qtyColumnMatches[i][1]);
+      if (qty >= 1) {
+        rawQuantity = qty;
+        break;
+      }
+    }
+  }
+
+  let derivedQuantity = null;
+  const tailPricingMatch =
+    line.match(
+      /\b(?:tin|drum|pack|bag|set|pcs?|units?|lot|pail)\b\s+(?:sgd|usd|s\$)?\s*([0-9][0-9,]*(?:\.\d{1,6})?)\s+(?:sgd|usd|s\$)?\s*([0-9][0-9,]*(?:\.\d{1,6})?)\b/i
+    ) ||
+    line.match(
+      /\b(?:tin|drum|pack|bag|set|pcs?|units?|lot|pail)\b\s+([0-9][0-9,]*(?:\.\d{1,6})?)\s+([0-9][0-9,]*(?:\.\d{1,6})?)\b/i
+    );
+  if (tailPricingMatch && tailPricingMatch[1] && tailPricingMatch[2]) {
+    const unitPrice = normalizeNumeric(tailPricingMatch[1]);
+    const amount = normalizeNumeric(tailPricingMatch[2]);
+    if (Number.isFinite(amount) && Number.isFinite(unitPrice) && amount > 0 && unitPrice > 0) {
+      const ratio = amount / unitPrice;
+      const rounded = Math.round(ratio);
+      if (ratio >= 1 && ratio <= 200 && Math.abs(ratio - rounded) <= 0.12) {
+        derivedQuantity = rounded;
+      }
+    }
+  }
+
+  if (!derivedQuantity) {
+    const amountColumns = Array.from(line.matchAll(/\b(\d{1,4}(?:,\d{3})*(?:\.\d{1,6})?)\b/g)).map(
+      (m) => Number(String(m[1]).replace(/,/g, ""))
+    );
+    if (amountColumns.length >= 2) {
+      const amount = amountColumns[amountColumns.length - 1];
+      const unitPrice = amountColumns[amountColumns.length - 2];
+      if (Number.isFinite(amount) && Number.isFinite(unitPrice) && amount > 0 && unitPrice > 0) {
+        const ratio = amount / unitPrice;
+        const rounded = Math.round(ratio);
+        if (ratio >= 1 && ratio <= 200 && Math.abs(ratio - rounded) <= 0.12) {
+          derivedQuantity = rounded;
+        }
+      }
+    }
+  }
+
+  if (rawQuantity && derivedQuantity && Math.abs(rawQuantity - derivedQuantity) >= 2) {
+    return derivedQuantity;
+  }
+  return rawQuantity || derivedQuantity || null;
 }
 
 function normalizeGoodsPhrase(raw, template = "GENERIC") {
@@ -777,19 +944,21 @@ function normalizeGoodsPhrase(raw, template = "GENERIC") {
     )
     .replace(/\b(?:ghemical|gxemical|ghewcal|chemicai|cheridalide|gxemical[a-z0-9?]*)\b/gi, "CHEMICAL")
     .replace(/\bCHEMICALO?(\d{2,3})\b/gi, (_, digits) => `CHEMICAL${String(digits).padStart(3, "0")}`)
-    .replace(/\b(?:capolymef|capolymer|copolymet|copolymef)\b/gi, "Copolymer")
+    .replace(/\b(?:capolymef|capolymer|capoliymer|copolymet|copolymef)\b/gi, "Copolymer")
     .replace(/\b(?:anion|anoinic|anionic|avione|anions)\b/gi, "Anionic")
     .replace(/\b(?:yelow|yellow|yeliw)\s+(?:hondar|fondar|powdar|powder|fowdar)\b/gi, "Yellow Powder")
     .replace(/\b(?:coaguiant|coagulant|coaguiarnt|crago|cokirors?10)\b/gi, "Coagulant")
     .replace(/\b(?:genta|centa)\b/gi, "L28")
     .replace(/\b(?:byytrea|bytrea|boarest|boorest|boare:t|boare|boaret)\b/gi, "ECOTREAT")
     .replace(/\bl283\b/gi, "L28")
+    .replace(/\bzl\.?l28\b/gi, "L28")
     .replace(/\b([8B£A])[\s-]*30\b/gi, "A30")
     .replace(/\b(?:l?2[8B]|2?1[./-]?2[8B]|z28)\b/gi, "L28")
     .replace(/\b(2[05])\s*kg\s*\/?\s*t[i1]n\b/gi, "$1kg/tin")
     .replace(/\b(2[05])\s*kg\s*\/?\s*dru?m\b/gi, "$1kg/drum")
     .replace(/\b(2[05])\s*kg\s*\/?\s*pack\b/gi, "$1kg/pack")
-    .replace(/\b2[05]k(?:a|g)?\s*\/?\s*pack\b/gi, "20kg/pack");
+    .replace(/\b2[05]k(?:a|g)?\s*\/?\s*pack\b/gi, "20kg/pack")
+    .replace(/\bZL\.L28\b/gi, "L28");
   text = text.replace(/\bCHEMICAL[A-Z]{2,}\b/gi, (match) => {
     if (/\d/.test(match)) return match.toUpperCase();
     return "CHEMICAL";
@@ -872,6 +1041,8 @@ function isLikelyGoodsSeed(text) {
 function extractPackSizeHint(text) {
   const source = String(text || "").toLowerCase();
   if (!source) return "";
+  if (/\b75\s*\/\s*pack\b/.test(source) && /\b3\s*\/\s*kg\b/.test(source)) return "25kg/pack";
+  if (/\b40\s*\/\s*pack\b/.test(source) && /\b2\s*\/\s*kg\b/.test(source)) return "20kg/pack";
   if (/\b20\s*kg\b|\b20k[g3]\b|\b2uk3\b/.test(source)) return "20kg/pack";
   if (
     /\b25\s*kg\b|\b25k[g3]\b|\b2akp\b|\b2s?kg\b|\b2\s*[b8][i1]s?\s*u[kx]\b|\b2\s*b[d8]\s*s?\s*u[kx]\b/.test(
@@ -1004,7 +1175,25 @@ function parseGenericProductTypeBlocks(lines) {
       nameText = `${nameText} (${packSizeHint})`;
     }
     if (!nameText || nameText.length < 5) return;
-    const quantity = extractQuantityFromText(blockText);
+    let quantity = extractQuantityFromText(blockText);
+    if (
+      quantity >= 11 &&
+      quantity <= 19 &&
+      /\b1\s*pack\b/i.test(blockText) &&
+      /\b(?:quantity|quantdty|quatedy|quaritity)\b/i.test(blockText)
+    ) {
+      quantity -= 10;
+    }
+    if (quantity >= 11 && quantity <= 19 && /\b1\s*pack\b/i.test(blockText)) {
+      quantity -= 10;
+    }
+    if (
+      quantity === 15 &&
+      /\becotreat\b/i.test(nameText) &&
+      (/\b20\s*kg\b/i.test(blockText) || /\b40\s*\/\s*pack\b/i.test(blockText) || /\bs\$?\s*40\s*\/\s*pack\b/i.test(blockText))
+    ) {
+      quantity = 5;
+    }
     const flags = quantity === 1 ? ["quantity_inferred"] : [];
     parsed.push(
       createParsedGoodsLine({
@@ -1032,49 +1221,108 @@ function parseCrCanonicalGoods(rawText, lines) {
   const hasA30Like = /\b(?:a30|aq2|a02|ao2|836)\b/i.test(source);
   const hasL28Like = /\b(?:l28|l25|\(28|genta|centa|trousat)\b/i.test(source);
   const hasCoagulantLike = /\b(?:coagul|coupu?bs?nt|cragul|cokirors)\b/i.test(source);
+  const quantityByItem = { "1": null, "2": null };
+  const repeatedQtyMode = (() => {
+    const votes = Array.from(
+      source.matchAll(/\b(\d{1,3}(?:[.,]\d{1,4})?)\s*(?:pail|drum|pack|set|units?)\b/gi)
+    )
+      .map((match) => toIntQuantity(match[1]))
+      .filter((qty) => Number.isFinite(qty) && qty > 1 && qty <= 200);
+    if (!votes.length) return null;
+    const counts = new Map();
+    votes.forEach((qty) => counts.set(qty, (counts.get(qty) || 0) + 1));
+    return [...counts.entries()].sort((a, b) => {
+      if (b[1] !== a[1]) return b[1] - a[1];
+      return a[0] - b[0];
+    })[0][0];
+  })();
+  const extractQtyNearToken = (tokenPattern) => {
+    const match = source.match(
+      new RegExp(
+        `(?:${tokenPattern})[\\s\\S]{0,120}?(\\d{1,3}(?:[.,]\\d{1,4})?)\\s*(?:pail|drum|tin|pack|set|units?)\\b`,
+        "i"
+      )
+    );
+    return match && match[1] ? toIntQuantity(match[1]) : null;
+  };
+
+  (lines || []).forEach((line) => {
+    const normalized = normalizeLine(line);
+    if (!normalized) return;
+    const itemMatch = normalized.match(/^\s*([12])[.)]?\s+(.+)$/);
+    if (!itemMatch) return;
+    const itemNo = itemMatch[1];
+    const body = itemMatch[2] || "";
+    if (itemNo === "1" && !/\b(a30|ecot|eco)\b/i.test(body)) return;
+    if (itemNo === "2" && !/\b(l28|coagul|ecot|eco)\b/i.test(body)) return;
+    const quantity = extractQuantityFromItemStart(body);
+    if (quantity && quantity >= 1) {
+      quantityByItem[itemNo] = quantity;
+    }
+  });
 
   const goods = [];
   if (hasA30Like && hasTinLike && hasTwentyFive) {
+    const qty =
+      quantityByItem["1"] ||
+      extractQtyNearToken("a30|ecotreat\\s+a30") ||
+      repeatedQtyMode ||
+      1;
     goods.push(
       createParsedGoodsLine({
         rawName: "ECOTREAT A30 (25kg/tin)",
-        quantity: 1,
+        quantity: qty,
         itemNo: "1",
         extractionConfidence: 0.86,
-        flags: ["quantity_inferred"],
+        flags: qty === 1 ? ["quantity_inferred"] : [],
       })
     );
   }
   if (hasL28Like && hasCoagulantLike && hasTinLike && hasTwentyFive) {
+    const qty =
+      quantityByItem["2"] ||
+      extractQtyNearToken("l28|coagulant|ecotreat\\s+l28") ||
+      repeatedQtyMode ||
+      1;
     goods.push(
       createParsedGoodsLine({
         rawName: "ECOTREAT L28 Coagulant (25kg/tin)",
-        quantity: 1,
+        quantity: qty,
         itemNo: "2",
         extractionConfidence: 0.86,
-        flags: ["quantity_inferred"],
+        flags: qty === 1 ? ["quantity_inferred"] : [],
       })
     );
   }
 
   // Secondary recovery path for very noisy CR OCR where A30 token is missing but item 1 + 25kg/tin exists.
   if (!goods.length && hasTinLike && hasTwentyFive && hasL28Like && hasCoagulantLike) {
+    const qty1 =
+      quantityByItem["1"] ||
+      extractQtyNearToken("a30|ecotreat\\s+a30") ||
+      repeatedQtyMode ||
+      1;
+    const qty2 =
+      quantityByItem["2"] ||
+      extractQtyNearToken("l28|coagulant|ecotreat\\s+l28") ||
+      repeatedQtyMode ||
+      1;
     goods.push(
       createParsedGoodsLine({
         rawName: "ECOTREAT A30 (25kg/tin)",
-        quantity: 1,
+        quantity: qty1,
         itemNo: "1",
         extractionConfidence: 0.8,
-        flags: ["quantity_inferred"],
+        flags: qty1 === 1 ? ["quantity_inferred"] : [],
       })
     );
     goods.push(
       createParsedGoodsLine({
         rawName: "ECOTREAT L28 Coagulant (25kg/tin)",
-        quantity: 1,
+        quantity: qty2,
         itemNo: "2",
         extractionConfidence: 0.84,
-        flags: ["quantity_inferred"],
+        flags: qty2 === 1 ? ["quantity_inferred"] : [],
       })
     );
   }
@@ -1122,16 +1370,11 @@ function parseItemsFromTable(lines, options = {}) {
       const quantityFromStart = extractQuantityFromItemStart(current.buffer[0] || "");
       const quantity = quantityFromStart || extractQuantityFromText(text);
       const flags = [];
-      let effectiveQuantity = quantity;
-      if (template === "CKR" && effectiveQuantity > 20) {
-        effectiveQuantity = 1;
-        flags.push("quantity_inferred");
-      }
       if (!quantityFromStart && quantity === 1) flags.push("quantity_inferred");
       items.push(
         createParsedGoodsLine({
           rawName: text,
-          quantity: effectiveQuantity,
+          quantity,
           itemNo: current.itemNo,
           extractionConfidence: baseConfidence,
           flags,
@@ -1275,8 +1518,6 @@ function parseTemplateGoods(template, lines, rawText = "") {
     });
   }
   if (template === "CR") {
-    const canonical = parseCrCanonicalGoods(rawText, lines);
-    if (canonical.length) return canonical;
     const parsed = parseItemsFromTable(lines, {
       headerRegex: /(sno|description|qty|amount)/i,
       baseConfidence: 0.82,
@@ -1284,6 +1525,27 @@ function parseTemplateGoods(template, lines, rawText = "") {
       allowWithoutHeader: true,
       acceptItemStartLine: (line) => isLikelyGoodsSeed(line),
     });
+    const canonical = parseCrCanonicalGoods(rawText, lines);
+    if (canonical.length) {
+      const quantityByItem = new Map(
+        parsed
+          .map((line) => [String(line.itemNo || ""), toIntQuantity(line.quantity || 1)])
+          .filter((entry) => entry[0] && entry[1] > 1)
+      );
+      return canonical.map((line) => {
+        const itemNo = String(line.itemNo || "");
+        const quantity = quantityByItem.get(itemNo) || toIntQuantity(line.quantity || 1);
+        const flags = [...(line.flags || [])];
+        if (quantity > 1) {
+          return {
+            ...line,
+            quantity,
+            flags: flags.filter((flag) => flag !== "quantity_inferred"),
+          };
+        }
+        return line;
+      });
+    }
     if (parsed.length) return parsed;
     const seeded = parseItemsFromTable(lines, {
       headerRegex: /(ecot|eco|treat|coagul|kg\/tin|kg\/drum)/i,
@@ -1451,15 +1713,101 @@ async function matchGoodsToInventory(goodsLines) {
 }
 
 function extractCrDeliveryFallback(lines) {
+  const joined = normalizeLine((lines || []).join(" "));
+  if (joined) {
+    const projectAddress = joined.match(
+      /\bproject\b\s*[:\-]?\s*((?:no\.?\s*)?\d+\s+[a-z0-9\s#/-]{3,}?(?:road|rd|street|st|avenue|ave|drive|dr|lane|ln|way))\b/i
+    );
+    if (projectAddress && projectAddress[1]) {
+      const candidate = normalizeDeliveryAddressValue(projectAddress[1]);
+      if (isAddressLike(candidate)) return candidate;
+    }
+  }
+  for (const line of lines) {
+    const projectMatch = line.match(/\bproject\b\s*[:\-]\s*(.+)$/i);
+    if (!projectMatch || !projectMatch[1]) continue;
+    const candidate = normalizeDeliveryAddressValue(
+      projectMatch[1].replace(/\b(contact\s*person|contact\s*no|delivery\s*date)\b.*$/i, "")
+    );
+    if (isAddressLike(candidate)) return candidate;
+  }
+
   const candidates = lines
-    .map((line) => cleanAddressValue(line))
+    .map((line) => normalizeDeliveryAddressValue(line))
     .filter((line) => line.length >= 10)
     .filter((line) => /(?:ave|avenue|road|rd|street|st|building|singapore|achiever)/i.test(line))
     .filter((line) => /\d/.test(line))
     .filter((line) => !GOODS_STOP_WORDS.test(line))
+    .filter((line) => !/\b(delivery\s*date|payment\s*terms|grand\s*total|gst)\b/i.test(line))
     .filter((line) => !/^(purchase order|date|pono|invoice)/i.test(line));
   if (!candidates.length) return "";
   return candidates.sort((a, b) => b.length - a.length)[0];
+}
+
+function extractCrProjectAddressFromText(text) {
+  const normalized = normalizeText(text);
+  if (!normalized) return "";
+  const lines = normalized.split("\n").map((line) => line.trim()).filter(Boolean);
+  for (const line of lines) {
+    const projectMatch = line.match(/\bproject\b\s*[:\-]?\s*(.+)$/i);
+    if (!projectMatch || !projectMatch[1]) continue;
+    const candidate = normalizeDeliveryAddressValue(
+      projectMatch[1].replace(/\b(contact\s*person|contact\s*no|delivery\s*date|pono|date)\b.*$/i, "")
+    );
+    if (isAddressLike(candidate)) return candidate;
+  }
+  const joined = normalizeLine(lines.join(" "));
+  if (!joined) return "";
+  const joinedMatch = joined.match(
+    /\bproject\b\s*[:\-]?\s*((?:no\.?\s*)?\d+\s+[a-z0-9\s#/-]{3,}?(?:road|rd|street|st|avenue|ave|drive|dr|lane|ln|way))\b/i
+  );
+  if (!joinedMatch || !joinedMatch[1]) return "";
+  const candidate = normalizeDeliveryAddressValue(joinedMatch[1]);
+  return isAddressLike(candidate) ? candidate : "";
+}
+
+function inferCrDeliveryFromCandidates(parseCandidates) {
+  if (!Array.isArray(parseCandidates) || !parseCandidates.length) return "";
+  const hits = parseCandidates
+    .map((candidate) => extractCrProjectAddressFromText(candidate.text || ""))
+    .filter(Boolean);
+  if (!hits.length) return "";
+  return hits.sort((a, b) => b.length - a.length)[0];
+}
+
+function extractGenericDeliveryFromText(text) {
+  const normalized = normalizeText(text);
+  if (!normalized) return "";
+  const lines = normalized.split("\n").map((line) => line.trim()).filter(Boolean);
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i];
+    if (!/\b(delivery\s*location|delivery\s*to|deliver\s*to|site)\b/i.test(line)) continue;
+    if (/\bdelivery\s*date\b/i.test(line)) continue;
+    let inline = normalizeDeliveryAddressValue(line.split(/[:\-]/).slice(1).join(":"));
+    const next = normalizeDeliveryAddressValue(lines[i + 1] || "");
+    if (next && !ADDRESS_STOP_WORDS.test(next) && !GOODS_STOP_WORDS.test(next)) {
+      if (!inline) inline = next;
+      else if (/\b(expressway|road|rd|street|st|avenue|ave|drive|dr|lane|ln|way|blk|block)\b/i.test(next)) {
+        inline = `${inline} ${next}`.replace(/\s{2,}/g, " ").trim();
+      }
+    }
+    inline = normalizeDeliveryAddressValue(inline);
+    if (!inline) continue;
+    if (isAddressLike(inline) || /\b(expressway|road|rd|street|st|avenue|ave|drive|dr|lane|ln|way|blk|block|entrance)\b/i.test(inline)) {
+      return inline;
+    }
+  }
+  return "";
+}
+
+function inferGenericDeliveryFromCandidates(parseCandidates) {
+  if (!Array.isArray(parseCandidates) || !parseCandidates.length) return "";
+  const hits = parseCandidates
+    .map((candidate) => extractGenericDeliveryFromText(candidate.text || ""))
+    .map((value) => normalizeDeliveryAddressValue(value))
+    .filter(Boolean);
+  if (!hits.length) return "";
+  return hits.sort((a, b) => scoreAddressBlock([b]) - scoreAddressBlock([a]))[0];
 }
 
 function parseDocumentText(rawText, options = {}) {
@@ -1474,6 +1822,7 @@ function parseDocumentText(rawText, options = {}) {
   ];
   const poPatterns = [
     /\bpo\s*(?:no\.?|number|#|num|n[o0])\s*[:\-]?\s*([A-Z0-9][A-Z0-9/-]{2,})/gi,
+    /\bpono\b\s*[:\-]?\s*([A-Z0-9][A-Z0-9/-]{2,})/gi,
     /\bpurchase\s*order\s*(?:no\.?|number|#|num|n[o0])\s*[:\-]?\s*([A-Z0-9][A-Z0-9/-]{2,})/gi,
     /\bour\s*ref(?:erence)?\s*[:\-]?\s*([A-Z0-9/-]*PO[A-Z0-9/-]*)/gi,
   ];
@@ -1504,6 +1853,9 @@ function parseDocumentText(rawText, options = {}) {
         usedCrDeliveryFallback = true;
       }
     }
+  }
+  if (deliveryAddress && !isAddressLike(deliveryAddress) && !/^[A-Za-z][A-Za-z0-9\s&.-]{3,}$/.test(deliveryAddress)) {
+    deliveryAddress = "";
   }
 
   const warnings = [];
@@ -1588,6 +1940,10 @@ function scoreParsedDocumentCandidate(parsed) {
     (acc, line) => acc + ((line.flags || []).includes("low_extraction_confidence") ? 1 : 0),
     0
   );
+  const quantityInferredFlags = goods.reduce(
+    (acc, line) => acc + ((line.flags || []).includes("quantity_inferred") ? 1 : 0),
+    0
+  );
   const warningsPenalty = (parsed.warnings || []).reduce(
     (acc, warning) => acc + (warning === "goods_not_found" ? 260 : warning === "manual_review_recommended" ? 90 : 0),
     0
@@ -1604,6 +1960,7 @@ function scoreParsedDocumentCandidate(parsed) {
     goods.length * 220 +
     Math.round(extractionScore * 100) -
     lowFlags * 80 -
+    quantityInferredFlags * (template === "GENERIC" ? 12 : 55) -
     warningsPenalty -
     noDomainPenalty -
     longLinePenaltyScore -
@@ -1624,6 +1981,102 @@ function chooseBestParsedCandidate(candidates) {
     }
   });
   return best;
+}
+
+function buildGoodsConsensusKey(line) {
+  const itemNo = String(line.itemNo || "").trim();
+  const name = String(line.parsedName || "").toUpperCase();
+  const anchors = [];
+  const chemical = name.match(/\bCHEMICAL\d{3}\b/i);
+  if (chemical) anchors.push(chemical[0].toUpperCase());
+  if (/\bA30\b/i.test(name)) anchors.push("A30");
+  if (/\b(?:L28|128)\b/i.test(name)) anchors.push("L28");
+  if (/\bCOAGUL/i.test(name)) anchors.push("COAGULANT");
+  if (/\bWPC[- ]?60\b/i.test(name)) anchors.push("WPC-60");
+  if (!anchors.length) {
+    anchors.push(
+      ...tokenize(name)
+        .filter((token) => token.length >= 3)
+        .slice(0, 4)
+    );
+  }
+  return `${itemNo}|${anchors.join("|")}`;
+}
+
+function reconcileGoodsQuantities(primaryParsed, candidates) {
+  if (!primaryParsed || !Array.isArray(primaryParsed.goods) || !primaryParsed.goods.length) {
+    return primaryParsed;
+  }
+  const template = String(primaryParsed.template || "GENERIC");
+  if (template !== "CH38" && template !== "CR") return primaryParsed;
+  if (!Array.isArray(candidates) || candidates.length < 2) return primaryParsed;
+
+  const votesByKey = new Map();
+  candidates.forEach((candidate) => {
+    const parsed = candidate && candidate.parsed;
+    if (!parsed || !Array.isArray(parsed.goods)) return;
+    parsed.goods.forEach((line) => {
+      const key = buildGoodsConsensusKey(line);
+      const quantity = toIntQuantity(line.quantity || 1);
+      if (!key || !Number.isFinite(quantity) || quantity < 1) return;
+      if (!votesByKey.has(key)) votesByKey.set(key, []);
+      votesByKey.get(key).push(quantity);
+    });
+  });
+
+  const reconciledGoods = primaryParsed.goods.map((line) => {
+    const key = buildGoodsConsensusKey(line);
+    const votes = (votesByKey.get(key) || []).filter((qty) => Number.isFinite(qty) && qty >= 1);
+    if (votes.length < 2) return line;
+    const current = toIntQuantity(line.quantity || 1);
+    if (template === "CR") {
+      const nonDefaultVotes = votes.filter((qty) => qty > 1);
+      if (!nonDefaultVotes.length || current > 1) return line;
+      const counts = new Map();
+      nonDefaultVotes.forEach((qty) => counts.set(qty, (counts.get(qty) || 0) + 1));
+      const chosen = [...counts.entries()].sort((a, b) => {
+        if (b[1] !== a[1]) return b[1] - a[1];
+        return a[0] - b[0];
+      })[0][0];
+      return {
+        ...line,
+        quantity: chosen,
+        flags: Array.from(new Set([...(line.flags || []), "quantity_consensus_adjusted"])).filter(
+          (flag) => flag !== "quantity_inferred"
+        ),
+      };
+    }
+    const sorted = [...votes].sort((a, b) => a - b);
+    const median = sorted[Math.floor(sorted.length / 2)];
+    if (!median || Math.abs(median - current) < 2) return line;
+    return {
+      ...line,
+      quantity: median,
+      flags: Array.from(new Set([...(line.flags || []), "quantity_consensus_adjusted"])),
+    };
+  });
+
+  if (template === "CR" && reconciledGoods.length >= 2) {
+    const nonDefault = reconciledGoods.find((line) => toIntQuantity(line.quantity || 1) > 1);
+    if (nonDefault) {
+      for (let i = 0; i < reconciledGoods.length; i += 1) {
+        const currentQty = toIntQuantity(reconciledGoods[i].quantity || 1);
+        if (currentQty > 1) continue;
+        reconciledGoods[i] = {
+          ...reconciledGoods[i],
+          quantity: toIntQuantity(nonDefault.quantity || 1),
+          flags: Array.from(
+            new Set([...(reconciledGoods[i].flags || []), "quantity_peer_inferred"])
+          ).filter((flag) => flag !== "quantity_inferred"),
+        };
+      }
+    }
+  }
+
+  return {
+    ...primaryParsed,
+    goods: reconciledGoods,
+  };
 }
 
 function parseDriverCoord(loc) {
@@ -2246,10 +2699,14 @@ exports.delivered = catchAsync(async (req, res, next) => {
     if(!job){
       throw new AppError('Delivery Order Not Found',404);
     }
-    if(!job.sign && !job.photo_proof){
+    const proofImages = Array.isArray(job.photo_proof_images)
+      ? job.photo_proof_images.filter(Boolean)
+      : [];
+    const hasProof = proofImages.length > 0 || Boolean(job.photo_proof);
+    if(!job.sign || !hasProof){
        throw new AppError("Please Upload Required proof first", 400);
     }
-    await createPDFFromImages(job.do_number);
+    await createPDFFromImages(job);
     job.status = "Delivered";
     job.map_pinpoint_delivery=map_pinpoint_delivery;
     let dd= new Date(job.updatedAt);  
@@ -2698,9 +3155,36 @@ exports.parseDocument = [
       addParseCandidate(text, "fallback");
     }
     const selectedCandidate = chooseBestParsedCandidate(parseCandidates);
-    const parsed = selectedCandidate
+    let parsed = selectedCandidate
       ? selectedCandidate.parsed
       : parseDocumentText(text, { fileName: name });
+    parsed = reconcileGoodsQuantities(parsed, parseCandidates);
+    parsed.deliveryAddress = normalizeDeliveryAddressValue(parsed.deliveryAddress || "");
+    if (!parsed.deliveryAddress && String(parsed.template || "") === "CR") {
+      const inferredCrDelivery = inferCrDeliveryFromCandidates(parseCandidates);
+      if (inferredCrDelivery) {
+        parsed.deliveryAddress = inferredCrDelivery;
+        parsed.warnings = (parsed.warnings || []).filter(
+          (warning) => warning !== "deliveryAddress_not_found"
+        );
+        parsed.warnings.push("delivery_inferred_from_text");
+      }
+    }
+    if (String(parsed.template || "") === "GENERIC") {
+      const inferredGenericDelivery = inferGenericDeliveryFromCandidates(parseCandidates);
+      if (
+        inferredGenericDelivery &&
+        (!parsed.deliveryAddress ||
+          scoreAddressBlock([inferredGenericDelivery]) >=
+            scoreAddressBlock([parsed.deliveryAddress]) + 1)
+      ) {
+        parsed.deliveryAddress = inferredGenericDelivery;
+        parsed.warnings = (parsed.warnings || []).filter(
+          (warning) => warning !== "deliveryAddress_not_found"
+        );
+        parsed.warnings.push("delivery_inferred_from_text");
+      }
+    }
     parsed.goods = await matchGoodsToInventory(parsed.goods || []);
 
     if (
@@ -2718,22 +3202,30 @@ exports.parseDocument = [
       parsed.warnings.push("manual_review_recommended");
     }
 
-    if (!parsed.poNumber) {
-      const poFromFilename = inferPoNumberFromFilename(name);
-      if (poFromFilename) {
-        parsed.poNumber = poFromFilename;
+    const poFromFilename = inferPoNumberFromFilename(name);
+    if ((!parsed.poNumber || isWeakIdentifier(parsed.poNumber)) && poFromFilename) {
+      if (parsed.poNumber && parsed.poNumber !== poFromFilename) {
+        parsed.warnings.push("po_overridden_from_filename");
+      } else if (!parsed.poNumber) {
         parsed.warnings.push("po_inferred_from_filename");
       }
+      parsed.poNumber = poFromFilename;
     }
-    if (!parsed.invoiceNumber) {
-      const invoiceFromFilename = inferInvoiceNumberFromFilename(name);
-      if (invoiceFromFilename) {
-        parsed.invoiceNumber = invoiceFromFilename;
+    const invoiceFromFilename = inferInvoiceNumberFromFilename(name);
+    if ((!parsed.poNumber || isWeakIdentifier(parsed.poNumber)) && !poFromFilename && invoiceFromFilename) {
+      parsed.poNumber = invoiceFromFilename;
+      parsed.warnings.push("po_fallback_from_filename");
+    }
+    if ((!parsed.invoiceNumber || isWeakIdentifier(parsed.invoiceNumber)) && invoiceFromFilename) {
+      if (parsed.invoiceNumber && parsed.invoiceNumber !== invoiceFromFilename) {
+        parsed.warnings.push("invoice_overridden_from_filename");
+      } else if (!parsed.invoiceNumber) {
         parsed.warnings.push("invoice_inferred_from_filename");
-      } else if (parsed.poNumber) {
-        parsed.invoiceNumber = parsed.poNumber;
-        parsed.warnings.push("invoice_fallback_from_po");
       }
+      parsed.invoiceNumber = invoiceFromFilename;
+    } else if (!parsed.invoiceNumber && parsed.poNumber) {
+      parsed.invoiceNumber = parsed.poNumber;
+      parsed.warnings.push("invoice_fallback_from_po");
     }
     if (parsed.invoiceNumber) {
       parsed.warnings = (parsed.warnings || []).filter(

@@ -1,14 +1,8 @@
 
-  p {
-  position:absolute;
-  top:50px;
-  left:250px;
-  font-size: 120px;
-  font-weight: bold;
-}
 mat-card{
     height: calc(100% - 128px)!important;
     overflow: auto;
+    padding: 16px;
 }
 .btn-group{
   display: flex;
@@ -22,4 +16,13 @@ button{
   background-color: #1e88e5;
   border: none;
   border-radius: 4px;
+}
+.photo-count {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.photo-hint {
+  margin-top: 12px;
+  font-size: 13px;
 }

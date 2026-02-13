@@ -28,28 +28,79 @@ async function getBytesFromStorage(key) {
   return fs.promises.readFile(localPath);
 }
 
-module.exports = async function createPDFFromImages(do_num = "Do-236FBmM") {
-  const pdfKey = `uploads/pdfs/${do_num}.pdf`;
+function resolveDoNumber(jobOrDoNum) {
+  if (jobOrDoNum && typeof jobOrDoNum === "object") {
+    return jobOrDoNum.do_number || "Do-236FBmM";
+  }
+  return jobOrDoNum || "Do-236FBmM";
+}
+
+function resolveProofPaths(jobOrDoNum, doNum) {
+  if (jobOrDoNum && typeof jobOrDoNum === "object") {
+    const proofImages = Array.isArray(jobOrDoNum.photo_proof_images)
+      ? jobOrDoNum.photo_proof_images.filter(Boolean)
+      : [];
+    if (proofImages.length) {
+      return proofImages;
+    }
+    if (jobOrDoNum.photo_proof) {
+      return [jobOrDoNum.photo_proof];
+    }
+  }
+  return [`uploads/proof-${doNum}.jpeg`];
+}
+
+function resolveSignPath(jobOrDoNum, doNum) {
+  if (jobOrDoNum && typeof jobOrDoNum === "object" && jobOrDoNum.sign) {
+    return jobOrDoNum.sign;
+  }
+  return `uploads/sign-${doNum}.png`;
+}
+
+async function embedImage(pdfDoc, storagePath) {
+  const imageBytes = await getBytesFromStorage(storagePath);
+  const lowerPath = String(storagePath || "").toLowerCase();
+  if (lowerPath.endsWith(".png")) {
+    return pdfDoc.embedPng(imageBytes);
+  }
+  return pdfDoc.embedJpg(imageBytes);
+}
+
+function drawImageFitted(page, image, x, y, maxWidth, maxHeight) {
+  const scale = Math.min(maxWidth / image.width, maxHeight / image.height);
+  const width = image.width * scale;
+  const height = image.height * scale;
+  const drawX = x + (maxWidth - width) / 2;
+  const drawY = y + (maxHeight - height) / 2;
+  page.drawImage(image, {
+    x: drawX,
+    y: drawY,
+    width,
+    height,
+  });
+}
+
+module.exports = async function createPDFFromImages(jobOrDoNum = "Do-236FBmM") {
+  const doNum = resolveDoNumber(jobOrDoNum);
+  const proofPaths = resolveProofPaths(jobOrDoNum, doNum);
+  const signPath = resolveSignPath(jobOrDoNum, doNum);
+  const pdfKey = `uploads/pdfs/${doNum}.pdf`;
   const pdfDoc = await PDFDocument.create();
+  const signImage = await embedImage(pdfDoc, signPath);
 
-  let imageBytes = await getBytesFromStorage(`uploads/proof-${do_num}.jpeg`);
-  let image = await pdfDoc.embedJpg(imageBytes);
-  const page = pdfDoc.addPage();
-  page.drawImage(image, {
-    x: 100,
-    y: 250,
-    width: 400,
-    height: 300,
-  });
+  for (let index = 0; index < proofPaths.length; index += 1) {
+    const proofImage = await embedImage(pdfDoc, proofPaths[index]);
+    const page = pdfDoc.addPage();
+    const pageWidth = page.getWidth();
+    const pageHeight = page.getHeight();
 
-  imageBytes = await getBytesFromStorage(`uploads/sign-${do_num}.png`);
-  image = await pdfDoc.embedPng(imageBytes);
-  page.drawImage(image, {
-    x: 100,
-    y: 650,
-    width: 150,
-    height: 150,
-  });
+    if (index === 0) {
+      drawImageFitted(page, signImage, 40, pageHeight - 180, 180, 130);
+      drawImageFitted(page, proofImage, 40, 40, pageWidth - 80, pageHeight - 240);
+    } else {
+      drawImageFitted(page, proofImage, 40, 40, pageWidth - 80, pageHeight - 80);
+    }
+  }
 
   const pdfBytes = await pdfDoc.save();
 
@@ -73,6 +124,6 @@ module.exports = async function createPDFFromImages(do_num = "Do-236FBmM") {
   // Local fallback
   const outDir = path.join(__dirname, "..", "..", "uploads", "pdfs");
   await fs.promises.mkdir(outDir, { recursive: true });
-  await fs.promises.writeFile(path.join(outDir, `${do_num}.pdf`), pdfBytes);
+  await fs.promises.writeFile(path.join(outDir, `${doNum}.pdf`), pdfBytes);
   return { provider: "local", pathname: pdfKey };
 };

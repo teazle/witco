@@ -8,11 +8,15 @@
             <mat-list-item>Name : {{jobDetails?.customer_firstName }}
                 &nbsp;{{jobDetails?.customer_lastName}}</mat-list-item>
             <mat-divider></mat-divider>
+            <mat-list-item>Company Name : {{jobDetails?.customer_companyName || '-'}}</mat-list-item>
+            <mat-divider></mat-divider>
             <mat-list-item>Email : {{jobDetails?.customer_email}}</mat-list-item>
             <mat-divider></mat-divider>
             <mat-list-item>Phone : {{jobDetails?.customer_phone}}</mat-list-item>
             <mat-divider></mat-divider>
-            <mat-list-item> DO Number  : {{goodsDetails?.invoiceNumber}}</mat-list-item>
+            <mat-list-item>DO Number : {{goodsDetails?.invoiceNumber || jobDetails?.do_number || '-'}}</mat-list-item>
+            <mat-divider></mat-divider>
+            <mat-list-item>PO Number : {{goodsDetails?.inv_temp || goodsDetails?.poNumber || '-'}}</mat-list-item>
             <mat-divider></mat-divider>
             <mat-list-item class="address"> Address : {{jobDetails?.customer_deliveryAddress || goodsDetails?.deliveryAddress}}</mat-list-item>
             <mat-divider></mat-divider>
@@ -66,7 +70,7 @@
         
         <div class="proccess-btn-group"> 
             <button mat-raised-button color="primary" (click)="sign()" [ngClass]="!checksign  ? 'green' : '' ">sign <mat-icon *ngIf="!checksign">done</mat-icon></button>
-            <button mat-raised-button color="primary" [disabled]="checksign" [ngClass]="!checkproof  ? 'green' : '' " (click)="webcam()">proof <mat-icon *ngIf="!checkproof">done</mat-icon></button>
+            <button mat-raised-button color="primary" [ngClass]="!checkproof  ? 'green' : '' " (click)="webcam()">proof <mat-icon *ngIf="!checkproof">done</mat-icon></button>
         </div>
         <div class="submit-btn">
             <button mat-raised-button color="primary" [disabled]="checkproof || checksign" (click)="submit()">Submit</button>

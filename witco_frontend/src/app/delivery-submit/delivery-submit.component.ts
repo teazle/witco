@@ -15,7 +15,7 @@ export class DeliverySubmitComponent implements OnInit {
   job_id;
   jobDetails:any; 
   goodsDetails:any;
-  checksign:Boolean=true;
+  checksign:boolean=true;
   checkproof:boolean=true;
   displayedColumns: string[] = ['sr','name', 'quantity'];
 
@@ -49,18 +49,25 @@ getjob(id:any){
   this.authService.getData(`jobs/get/${id}`).subscribe((res:any)=>{
     this.jobDetails = res.data.job;
     // this.selectedOption = this.jobDetails.paid == false ? 'unpaid' :'paid'
-    this.authService.getData(`goods/get/${this.jobDetails.goods_id}`).subscribe((response:any)=>{
+      this.authService.getData(`goods/get/${this.jobDetails.goods_id}`).subscribe((response:any)=>{
       this.dataSource.data=response.data.goods;
       this.goodsDetails= response.data;
-      if(this.jobDetails.sign!=="" ){
-        this.checksign=false;
-      }
-      if( this.jobDetails.photo_proof!==""){
-        this.checkproof=false;
-      }
+      this.checksign = !Boolean(this.jobDetails && this.jobDetails.sign);
+      this.checkproof = !this.hasProofPhotos(this.jobDetails);
       this.authService.setLoader(false);
     })
   })
+}
+
+private hasProofPhotos(job: any): boolean {
+  if (!job) return false;
+  if (Array.isArray(job.photo_proof_images)) {
+    const photos = job.photo_proof_images.filter((item: any) => Boolean(item));
+    if (photos.length > 0) {
+      return true;
+    }
+  }
+  return Boolean(job.photo_proof);
 }
 
 sign(){
