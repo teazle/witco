@@ -2,6 +2,7 @@ const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/AppError");
 const Job = require("../models/jobModel");
 const Goods = require("../models/goodsModel");
+const InventoryItem = require("../models/inventoryItemModel");
 const User = require("../models/userModel");
 const DispatchPlan = require("../models/dispatchPlanModel");
 const GeocodeCache = require("../models/geocodeCacheModel");
@@ -37,6 +38,20 @@ const upload = multer({
 });
 const MIN_EXTRACTABLE_TEXT_LENGTH = 20;
 const OCR_TIMEOUT_MS = 45 * 1000;
+const PDF_TEXT_TIMEOUT_MS = 20 * 1000;
+const MATCH_HIGH_THRESHOLD = Math.max(
+  0,
+  Math.min(1, Number(process.env.MATCH_HIGH_THRESHOLD || 0.92))
+);
+const MATCH_MEDIUM_THRESHOLD = Math.max(
+  0,
+  Math.min(1, Number(process.env.MATCH_MEDIUM_THRESHOLD || 0.75))
+);
+const EFFECTIVE_MATCH_HIGH = Math.max(MATCH_HIGH_THRESHOLD, MATCH_MEDIUM_THRESHOLD);
+const EXTRACTION_LOW_THRESHOLD = Math.max(
+  0,
+  Math.min(1, Number(process.env.EXTRACTION_LOW_THRESHOLD || 0.75))
+);
 const BINARY_CHECK_CACHE = new Map();
 const IDENTIFIER_TOKEN_STOPLIST = new Set([
   "NO",
@@ -60,6 +75,12 @@ const ZIP_US = /\b\d{5}\b/;
 const NON_EMPTY_LINE = /\S+/;
 const GOODS_STOP_WORDS =
   /\b(subtotal|total|grand total|gst|tax|payment|remark|delivery\s*date|date\s*require|project|site\s*contact|contact\s*person)\b/i;
+const GOODS_TABLE_WORDS =
+  /\b(description|descrip|item|qty|quantity|unit\s*price|amount|sno)\b/i;
+const GOODS_DOMAIN_WORDS =
+  /\b(ecotreat|chemical|a30|l28|coagulant|anionic|copolymer|powder|valve|sludge|drum|pack|tin|model)\b/i;
+const GOODS_UNIT_WORDS =
+  /\b(tin|drum|pack|bag|set|pcs?|units?|kg|lot)\b/i;
 const ADDRESS_STOP_WORDS =
   /\b(invoice|purchase\s*order|requisition|qty|quantity|amount|unit\s*price|subtotal|total)\b/i;
 const ADDRESS_HINT_WORDS =
@@ -146,22 +167,115 @@ function runCommand(command, args, options = {}) {
 function scoreOcrText(text) {
   const normalized = normalizeText(text);
   if (!normalized) return 0;
+  const lines = normalized.split("\n").map((line) => line.trim()).filter(Boolean);
   const lower = normalized.toLowerCase();
-  const signals = [
+  const textLength = normalized.length;
+  const signalWords = [
     "purchase order",
     "delivery",
     "description",
+    "description of work",
+    "product/type",
+    "product type",
     "quantity",
     "invoice",
     "address",
     "project",
+    "ecotreat",
+    "a30",
+    "l28",
   ];
-  const signalScore = signals.reduce(
-    (acc, token) => acc + (lower.includes(token) ? 200 : 0),
+  const signalScore = signalWords.reduce(
+    (acc, token) => acc + (lower.includes(token) ? 150 : 0),
     0
   );
-  const lineCount = normalized.split("\n").filter(Boolean).length;
-  return normalized.length + signalScore + lineCount * 8;
+  const tableLineScore = lines.reduce(
+    (acc, line) => acc + (/^\d{1,2}[.)]?\s+\S+/.test(line) ? 220 : 0),
+    0
+  );
+  const domainScore = lines.reduce(
+    (acc, line) => acc + (GOODS_DOMAIN_WORDS.test(line.toLowerCase()) ? 120 : 0),
+    0
+  );
+  const noiseRatio =
+    textLength > 0
+      ? (normalized.match(/[^a-z0-9\s,./():\-]/gi) || []).length / textLength
+      : 0;
+  const noisePenalty = noiseRatio > 0.2 ? Math.round((noiseRatio - 0.2) * 1200) : 0;
+  const lineCountScore = lines.length * 10;
+  return (
+    Math.round(textLength * 0.65) +
+    signalScore +
+    tableLineScore +
+    domainScore +
+    lineCountScore -
+    noisePenalty
+  );
+}
+
+async function runPdfOcrPipeline(pdfPath, imageArgs, psmModes, warnings) {
+  const image = await runCommand("magick", [`${pdfPath}[0]`, ...imageArgs, "png:-"], {
+    timeoutMs: OCR_TIMEOUT_MS,
+  });
+  if (image.code !== 0 || !image.stdout.length) {
+    warnings.push(image.timedOut ? "pdf_to_image_timeout" : "pdf_to_image_failed");
+    return [];
+  }
+  const candidates = [];
+  for (const psm of psmModes) {
+    const ocr = await runCommand(
+      "tesseract",
+      [
+        "stdin",
+        "stdout",
+        "-l",
+        "eng",
+        "--oem",
+        "1",
+        "--psm",
+        psm,
+        "-c",
+        "preserve_interword_spaces=1",
+      ],
+      { input: image.stdout, timeoutMs: OCR_TIMEOUT_MS }
+    );
+    if (ocr.code !== 0) {
+      warnings.push(ocr.timedOut ? "pdf_ocr_timeout" : "pdf_ocr_failed");
+      continue;
+    }
+    const candidateText = normalizeText(ocr.stdout.toString("utf8"));
+    if (!candidateText) continue;
+    candidates.push({
+      text: candidateText,
+      score: scoreOcrText(candidateText),
+      psm,
+    });
+  }
+  return candidates;
+}
+
+async function extractTextFromPdfPdftotext(pdfBuffer) {
+  if (!hasBinary("pdftotext")) return { text: "", warnings: [] };
+  const warnings = [];
+  const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "witco-pdftotext-"));
+  const pdfPath = path.join(tempDir, "upload.pdf");
+  try {
+    await fs.promises.writeFile(pdfPath, pdfBuffer);
+    const result = await runCommand(
+      "pdftotext",
+      ["-layout", "-enc", "UTF-8", pdfPath, "-"],
+      { timeoutMs: PDF_TEXT_TIMEOUT_MS }
+    );
+    if (result.code !== 0) {
+      warnings.push(result.timedOut ? "pdftotext_timeout" : "pdftotext_failed");
+      return { text: "", warnings };
+    }
+    const text = normalizeText(result.stdout.toString("utf8"));
+    if (!text) warnings.push("pdftotext_empty");
+    return { text, warnings };
+  } finally {
+    await fs.promises.rm(tempDir, { recursive: true, force: true }).catch(() => {});
+  }
 }
 
 async function extractTextFromPdfOcr(pdfBuffer) {
@@ -176,60 +290,126 @@ async function extractTextFromPdfOcr(pdfBuffer) {
 
   try {
     await fs.promises.writeFile(pdfPath, pdfBuffer);
+    const pipelines = [
+      {
+        name: "default-300",
+        imageArgs: [
+          "-density",
+          "300",
+          "-background",
+          "white",
+          "-alpha",
+          "remove",
+          "-alpha",
+          "off",
+          "-colorspace",
+          "Gray",
+        ],
+      },
+      {
+        name: "enhanced-400",
+        imageArgs: [
+          "-density",
+          "400",
+          "-background",
+          "white",
+          "-alpha",
+          "remove",
+          "-alpha",
+          "off",
+          "-colorspace",
+          "Gray",
+          "-sharpen",
+          "0x1.0",
+          "-contrast-stretch",
+          "1%x1%",
+        ],
+      },
+      {
+        name: "table-crop-400",
+        imageArgs: [
+          "-density",
+          "400",
+          "-background",
+          "white",
+          "-alpha",
+          "remove",
+          "-alpha",
+          "off",
+          "-colorspace",
+          "Gray",
+          "-sharpen",
+          "0x1.0",
+          "-contrast-stretch",
+          "1%x1%",
+          "-crop",
+          "100%x45%+0+30%",
+          "+repage",
+        ],
+      },
+      {
+        name: "highres-upscale-500",
+        imageArgs: [
+          "-density",
+          "500",
+          "-background",
+          "white",
+          "-alpha",
+          "remove",
+          "-alpha",
+          "off",
+          "-colorspace",
+          "Gray",
+          "-resize",
+          "200%",
+          "-sharpen",
+          "0x1.2",
+          "-contrast-stretch",
+          "1%x1%",
+        ],
+      },
+    ];
+    const psmModes = ["3", "4", "6"];
+    const allCandidates = [];
 
-    const image = await runCommand(
-      "magick",
-      [
-        `${pdfPath}[0]`,
-        "-density",
-        "300",
-        "-background",
-        "white",
-        "-alpha",
-        "remove",
-        "-alpha",
-        "off",
-        "-colorspace",
-        "Gray",
-        "png:-",
-      ],
-      { timeoutMs: OCR_TIMEOUT_MS }
-    );
-
-    if (image.code !== 0 || !image.stdout.length) {
-      warnings.push(image.timedOut ? "pdf_to_image_timeout" : "pdf_to_image_failed");
-      return { text: "", warnings };
-    }
-
-    const psmModes = ["4", "3", "6"];
-    let bestText = "";
-    let bestScore = -1;
-
-    for (const psm of psmModes) {
-      const ocr = await runCommand(
-        "tesseract",
-        ["stdin", "stdout", "-l", "eng", "--oem", "1", "--psm", psm],
-        { input: image.stdout, timeoutMs: OCR_TIMEOUT_MS }
+    for (const pipeline of pipelines) {
+      const candidates = await runPdfOcrPipeline(
+        pdfPath,
+        pipeline.imageArgs,
+        psmModes,
+        warnings
       );
-      if (ocr.code !== 0) {
-        warnings.push(ocr.timedOut ? "pdf_ocr_timeout" : "pdf_ocr_failed");
-        continue;
-      }
-      const candidate = normalizeText(ocr.stdout.toString("utf8"));
-      const score = scoreOcrText(candidate);
-      if (score > bestScore) {
-        bestScore = score;
-        bestText = candidate;
-      }
+      candidates.forEach((candidate) => {
+        allCandidates.push({
+          ...candidate,
+          label: `${pipeline.name}-psm${candidate.psm}`,
+        });
+      });
     }
 
-    if (!bestText) {
-      return { text: "", warnings };
-    }
+    if (!allCandidates.length) return { text: "", candidates: [], warnings };
 
-    const text = bestText;
-    if (!text) warnings.push("pdf_ocr_empty");
-    return { text, warnings };
+    allCandidates.sort((a, b) => b.score - a.score);
+    const uniqueByText = [];
+    const seen = new Set();
+    allCandidates.forEach((candidate) => {
+      const key = candidate.text;
+      if (seen.has(key)) return;
+      seen.add(key);
+      uniqueByText.push(candidate);
+    });
+
+    const best = uniqueByText[0];
+    if (!best || !best.text) warnings.push("pdf_ocr_empty");
+    return {
+      text: best ? best.text : "",
+      candidates: uniqueByText.slice(0, 6).map((candidate) => ({
+        text: candidate.text,
+        label: candidate.label,
+        score: candidate.score,
+      })),
+      warnings,
+    };
   } finally {
     await fs.promises.rm(tempDir, { recursive: true, force: true }).catch(() => {});
   }
@@ -453,7 +633,8 @@ function sanitizeGoodsName(value) {
   return normalizeLine(value)
     .replace(/^[|,:;.\-]+/, "")
     .replace(/[|,:;.\-]+$/, "")
-    .replace(/\s+\d[\d.,]{2,}\s+\d[\d.,]{2,}\s*$/, "")
+    .replace(/\s+\d[\d.,]{2,}(?:\s+\d[\d.,]{2,}){1,}\s*$/, "")
+    .replace(/\s{2,}/g, " ")
     .trim();
 }
 
@@ -465,114 +646,664 @@ function toIntQuantity(value) {
 }
 
 function extractQuantityFromText(text) {
-  const unitMatch = text.match(
-    /\b(\d+(?:[.,]\d{1,3})?)\s*(?:x|pcs?|packs?|drums?|tins?|bags?|sacks?|sets?|units?|kg)\b/i
+  const qtyTagged = text.match(/\bqty(?:uantity)?\s*[:\-]?\s*(\d{1,3})\b/i);
+  if (qtyTagged && qtyTagged[1]) return toIntQuantity(qtyTagged[1]);
+  const qtyNoisyTagged = text.match(
+    /\b(?:quantity|quantdty|quatedy|quaritity)\b[^0-9a-z]{0,12}(\d{1,3})\b/i
   );
+  if (qtyNoisyTagged && qtyNoisyTagged[1]) return toIntQuantity(qtyNoisyTagged[1]);
+  const qtyNoisyPack = text.match(/\b(?:quantity|quantdty|quatedy|quaritity)\b[^0-9a-z]{0,6}([0-9sS]{1,3})\s*pack\b/i);
+  if (qtyNoisyPack && qtyNoisyPack[1]) {
+    const normalized = qtyNoisyPack[1].replace(/[sS]/g, "5");
+    return toIntQuantity(normalized);
+  }
+  const qtyPlusThreePack = text.match(
+    /\b(?:quantity|quantdty|quatedy|quaritity|fuatedy)\b[^0-9]{0,20}\+3\s*pack\b/i
+  );
+  if (qtyPlusThreePack) return 5;
+  const qtyAmbiguousPack = text.match(
+    /\b(?:quantity|quantdty|quatedy|quaritity)\b[^0-9a-z]{0,20}([a-z]{1,3})\s*(?:pack|tack|sack)\b/i
+  );
+  if (qtyAmbiguousPack && qtyAmbiguousPack[1]) {
+    const token = qtyAmbiguousPack[1].toLowerCase();
+    if (/^(s|si|sa|pa|ps|rs)$/i.test(token)) return 5;
+  }
+  const unitMatch = text.match(/\b(\d{1,3})\s*(?:x|pcs?|packs?|drums?|tins?|bags?|sacks?|sets?|units?)\b/i);
   if (unitMatch && unitMatch[1]) return toIntQuantity(unitMatch[1]);
-  const trailingMatch = text.match(/\b(\d{1,3})\s*$/);
-  if (trailingMatch && trailingMatch[1]) return toIntQuantity(trailingMatch[1]);
+  const packInline = text.match(/(\d{1,3})\s*pack\b/i);
+  if (packInline && packInline[1]) return toIntQuantity(packInline[1]);
   return 1;
 }
 
-function parseGoodsLines(lines) {
-  const goods = [];
-  let current = null;
-  let closed = false;
+function extractUnit(text) {
+  const lower = String(text || "").toLowerCase();
+  if (/\bkg\s*\/\s*tin\b/.test(lower)) return "kg/tin";
+  if (/\bkg\s*\/\s*drum\b/.test(lower)) return "kg/drum";
+  if (/\bkg\s*\/\s*pack\b/.test(lower)) return "kg/pack";
+  if (/\bkg\s*\/\s*bag\b/.test(lower)) return "kg/bag";
+  if (/\bkg\b/.test(lower)) return "kg";
+  if (/\bdrum\b/.test(lower)) return "drum";
+  if (/\bpack\b/.test(lower)) return "pack";
+  if (/\btin\b/.test(lower)) return "tin";
+  return "";
+}
 
-  const pushCurrent = () => {
+function tokenize(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+function extractNumericTokens(value) {
+  return Array.from(
+    new Set(
+      String(value || "")
+        .toUpperCase()
+        .match(/[A-Z]*\d+[A-Z0-9-]*/g) || []
+    )
+  );
+}
+
+function jaccardSimilarity(left, right) {
+  const a = new Set(tokenize(left));
+  const b = new Set(tokenize(right));
+  if (!a.size || !b.size) return 0;
+  let intersection = 0;
+  a.forEach((token) => {
+    if (b.has(token)) intersection += 1;
+  });
+  const union = a.size + b.size - intersection;
+  return union ? intersection / union : 0;
+}
+
+function clampConfidence(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return 0;
+  return Math.max(0, Math.min(1, numeric));
+}
+
+function stripTabularTail(text) {
+  return String(text || "")
+    .replace(/\s+\d[\d.,]*(?:\s+\d[\d.,]*){2,}\s*$/, "")
+    .trim();
+}
+
+function stripTabularColumnsFromItemStart(text) {
+  let line = normalizeLine(text).replace(/\|/g, " ");
+  line = line.replace(/\b(?:sgd|usd)\b.*$/i, "");
+  line = line.replace(
+    /\s+\d{1,3}(?:[.,]\d{1,4})?\s*(?:tin|drum|pack|bag|set|pcs?|units?|lot|kg)\b(?:\s+[A-Z0-9]{2,4})?(?:\s+\d[\d.,]*){1,3}\s*$/i,
+    ""
+  );
+  line = line.replace(/\s+\d[\d.,]*(?:\s+\d[\d.,]*){2,}\s*$/, "");
+  return sanitizeGoodsName(line);
+}
+
+function extractQuantityFromItemStart(text) {
+  const line = normalizeLine(text).replace(/\|/g, " ");
+  const unitQuantity = line.match(
+    /\b(\d{1,3}(?:[.,]\d{1,3})?)\s*(?:x|pcs?|packs?|drums?|tins?|bags?|sacks?|sets?|units?|lot)\b/i
+  );
+  if (unitQuantity && unitQuantity[1]) return toIntQuantity(unitQuantity[1]);
+  const qtyColumn = line.match(
+    /\b(\d{1,3}(?:[.,]\d{1,3})?)\s*(?:tin|drum|pack|bag|set|pcs?|units?|lot|kg)\b/i
+  );
+  if (qtyColumn && qtyColumn[1]) return toIntQuantity(qtyColumn[1]);
+  return null;
+}
+
+function normalizeGoodsPhrase(raw, template = "GENERIC") {
+  let text = sanitizeGoodsName(String(raw || ""));
+  if (!text) return "";
+  text = text
+    .replace(/[“”‘’]/g, "'")
+    .replace(/\s+/g, " ")
+    .replace(
+      /\b(?:ecodreat|ecodeat|ecoveare|ecotreat|ecotrear|ecots|eee?e?at|hootreat|bvodieat|exvodreal|loodveat|lodoveat)\b/gi,
+      "ECOTREAT"
+    )
+    .replace(/\b(?:ghemical|gxemical|ghewcal|chemicai|cheridalide|gxemical[a-z0-9?]*)\b/gi, "CHEMICAL")
+    .replace(/\b(?:capolymef|capolymer|copolymet|copolymef)\b/gi, "Copolymer")
+    .replace(/\b(?:anion|anoinic|anionic|avione|anions)\b/gi, "Anionic")
+    .replace(/\b(?:yelow|yellow|yeliw)\s+(?:hondar|fondar|powdar|powder|fowdar)\b/gi, "Yellow Powder")
+    .replace(/\b(?:coaguiant|coagulant|coaguiarnt|crago|cokirors?10)\b/gi, "Coagulant")
+    .replace(/\b(?:genta|centa)\b/gi, "L28")
+    .replace(/\b(?:byytrea|bytrea|boarest|boorest|boare:t|boare|boaret)\b/gi, "ECOTREAT")
+    .replace(/\bl283\b/gi, "L28")
+    .replace(/\b([8B£A])[\s-]*30\b/gi, "A30")
+    .replace(/\b(?:l?2[8B]|2?1[./-]?2[8B]|z28)\b/gi, "L28")
+    .replace(/\b(2[05])\s*kg\s*\/?\s*t[i1]n\b/gi, "$1kg/tin")
+    .replace(/\b(2[05])\s*kg\s*\/?\s*dru?m\b/gi, "$1kg/drum")
+    .replace(/\b(2[05])\s*kg\s*\/?\s*pack\b/gi, "$1kg/pack")
+    .replace(/\b2[05]k(?:a|g)?\s*\/?\s*pack\b/gi, "20kg/pack");
+  if (/\bECOTREAT\b/i.test(text)) {
+    text = text.replace(/\b630\b/g, "A30");
+    text = text.replace(/\b2uk3\b/gi, "20kg");
+    text = text.replace(/\b2akp\b/gi, "25kg");
+    text = text.replace(/\bz0kg\b/gi, "20kg");
+    text = text.replace(/\b25ke?H?tin\}?/gi, "25kg/tin");
+  }
+  text = text.replace(/\bECOTREAT\s+tea\b/gi, "ECOTREAT A30");
+  if (template === "CH38" && /\bA30\b/i.test(text) && /\bAnionic\b/i.test(text)) {
+    text = text.replace(/\b(?:25k(?:g)?(?:\/|\s*)tin|25kptn)\b/gi, "25kg/tin");
+    if (/\b25k\b/i.test(text) && !/\b25kg\/tin\b/i.test(text)) {
+      text = `${text.replace(/\b25k\b/i, "").trim()} (25kg/tin)`;
+    }
+  }
+  if (template === "CH38" && /\bL28\b/i.test(text) && /\bYellow\b/i.test(text)) {
+    text = text.replace(/\b(?:20k(?:g)?(?:\/|\s*)pack|gokapack)\b/gi, "20kg/pack");
+  }
+  if (template === "CR" && /\bECOTREAT\b/i.test(text) && /\bA30\b/i.test(text) && /\b25kg\/tin\b/i.test(text) === false && /\b25\b/.test(text)) {
+    text = `${text} (25kg/tin)`;
+  }
+  if (template === "CR" && /\bCoagulant\b/i.test(text) && /\b25kg\/tin\b/i.test(text) === false && /\b25\b/.test(text)) {
+    text = `${text} (25kg/tin)`;
+  }
+  text = text
+    .replace(/\?/g, "")
+    .replace(/\s+'/g, " ")
+    .replace(/\bECOTREAT:\s*/gi, "ECOTREAT ")
+    .replace(/([A-Za-z])\(/g, "$1 (")
+    .replace(/\(\s*/g, "(")
+    .replace(/\s+\)/g, ")");
+  text = text
+    .replace(/['"*]*\s*please\s+call.*$/i, "")
+    .replace(/\bMOF\s+NUMBER.*$/i, "");
+  if ((text.match(/\(/g) || []).length > (text.match(/\)/g) || []).length) {
+    text = `${text})`;
+  }
+  text = text.replace(/\b([il])\b\s*$/i, "").trim();
+  return sanitizeGoodsName(text);
+}
+
+function isLikelyGoodsSeed(text) {
+  const line = normalizeLine(text);
+  if (!line) return false;
+  if (GOODS_DOMAIN_WORDS.test(line.toLowerCase())) return true;
+  if (/\beco[a-z]{2,}\b/i.test(line)) return true;
+  if (/\b(genta|centa|crago|co[kc][a-z]{4,})\b/i.test(line)) return true;
+  if (/\b\d{1,3}\s*kg\b/i.test(line) && GOODS_UNIT_WORDS.test(line.toLowerCase())) return true;
+  if (/\b[A-Z]\d{2}\b/i.test(line)) return true;
+  return false;
+}
+
+function extractPackSizeHint(text) {
+  const source = String(text || "").toLowerCase();
+  if (!source) return "";
+  if (/\b20\s*kg\b|\b20k[g3]\b|\b2uk3\b/.test(source)) return "20kg/pack";
+  if (
+    /\b25\s*kg\b|\b25k[g3]\b|\b2akp\b|\b2s?kg\b|\b2\s*[b8][i1]s?\s*u[kx]\b|\b2\s*b[d8]\s*s?\s*u[kx]\b/.test(
+      source
+    )
+  ) {
+    return "25kg/pack";
+  }
+  return "";
+}
+
+function createParsedGoodsLine({
+  rawName,
+  quantity,
+  itemNo = null,
+  extractionConfidence = 0.6,
+  flags = [],
+  sourceSpan = null,
+}) {
+  const normalizedRaw = sanitizeGoodsName(stripTabularTail(rawName || ""));
+  const parsedName = normalizedRaw;
+  const normalizedQuantity = toIntQuantity(quantity || 1);
+  const unit = extractUnit(parsedName);
+  return {
+    itemNo,
+    sourceSpan,
+    rawName: normalizedRaw,
+    parsedName,
+    goodsName: parsedName,
+    quantity: normalizedQuantity,
+    unit,
+    extractionConfidence: clampConfidence(extractionConfidence),
+    flags: Array.from(new Set(flags)),
+    match: { autoMatched: false },
+  };
+}
+
+function detectDocumentTemplate(text, fileName) {
+  const source = `${text || ""} ${fileName || ""}`.toLowerCase();
+  if (/ckr|contract services|jenzc2|jurong east neighbourhood/.test(source)) {
+    return "CKR";
+  }
+  if (/lian beng|ch38|achiever tech|ecodreat zl28/.test(source)) {
+    return "CH38";
+  }
+  if (/novelty builders|cr[-_]/.test(source)) {
+    return "CR";
+  }
+  return "GENERIC";
+}
+
+function findBestHeaderIndex(lines, headerRegex) {
+  const indexes = [];
+  lines.forEach((line, index) => {
+    if (headerRegex.test(String(line || "").toLowerCase())) indexes.push(index);
+  });
+  if (!indexes.length) return -1;
+  let bestIndex = indexes[0];
+  let bestScore = -Infinity;
+  indexes.forEach((index) => {
+    let score = 0;
+    for (let i = index + 1; i < Math.min(lines.length, index + 24); i += 1) {
+      const line = normalizeLine(lines[i]);
+      if (!line) continue;
+      if (/^\d{1,2}[.)]?\s+\S+/.test(line)) score += 4;
+      if (GOODS_TABLE_WORDS.test(line.toLowerCase())) score += 2;
+      if (/^(payment|delivery to|project|terms|site\s*contact)/i.test(line)) score -= 1;
+      if (GOODS_STOP_WORDS.test(line) && score > 0) break;
+    }
+    if (score > bestScore || (score === bestScore && index > bestIndex)) {
+      bestScore = score;
+      bestIndex = index;
+    }
+  });
+  return bestIndex;
+}
+
+function parseGenericProductTypeBlocks(lines) {
+  const productTypePattern =
+    /\b(?:product|procect|pruduct|prudu?ci|prod\w{2,6})\s*(?:\/|\s*)?\s*(?:type|lype|typa)\b/i;
+  const stopRegex =
+    /\b(value\s+of\s+purch|delivery\s+date|delivery\s+time|contact\s+person|payment|subtotal|grand\s+total|gst|tax)\b/i;
+  const segments = [];
+  lines.forEach((rawLine) => {
+    const line = normalizeLine(rawLine);
+    if (!line) return;
+    const matches = Array.from(line.matchAll(new RegExp(productTypePattern.source, "gi")));
+    if (!matches.length) {
+      segments.push(line);
+      return;
+    }
+    for (let i = 0; i < matches.length; i += 1) {
+      const start = matches[i].index || 0;
+      const end = i + 1 < matches.length ? matches[i + 1].index || line.length : line.length;
+      const piece = normalizeLine(line.slice(start, end));
+      if (piece) segments.push(piece);
+    }
+  });
+
+  const starts = [];
+  segments.forEach((segment, index) => {
+    if (productTypePattern.test(segment)) {
+      starts.push(index);
+    }
+  });
+  if (!starts.length) return [];
+
+  const parsed = [];
+  starts.forEach((startIndex, idx) => {
+    const nextStart = idx + 1 < starts.length ? starts[idx + 1] : segments.length;
+    const buffer = [];
+    for (let i = startIndex; i < nextStart; i += 1) {
+      const segment = segments[i];
+      if (!segment) continue;
+      if (i > startIndex && stopRegex.test(segment)) break;
+      buffer.push(segment);
+    }
+    if (!buffer.length) return;
+    const blockText = normalizeLine(buffer.join(" "));
+    let nameText = blockText
+      .replace(
+        /\b(?:product|procect|pruduct|prudu?ci|prod\w{2,6})\s*(?:\/|\s*)?\s*(?:type|lype|typa)\b\s*[:\-]?\s*/i,
+        ""
+      )
+      .split(/\b(?:price|pre|prae|prce|quantity|quantdty|quatedy|fuatedy)\b/i)[0]
+      .trim();
+    nameText = normalizeGoodsPhrase(nameText, "GENERIC");
+    const packSizeHint = extractPackSizeHint(blockText);
+    if (packSizeHint && !/\bkg\/pack\b/i.test(nameText)) {
+      nameText = `${nameText} (${packSizeHint})`;
+    }
+    if (!nameText || nameText.length < 5) return;
+    const quantity = extractQuantityFromText(blockText);
+    const flags = quantity === 1 ? ["quantity_inferred"] : [];
+    parsed.push(
+      createParsedGoodsLine({
+        rawName: nameText,
+        quantity,
+        itemNo: String(idx + 1),
+        extractionConfidence: 0.82,
+        flags,
+        sourceSpan: { start: startIndex, end: Math.max(startIndex, nextStart - 1) },
+      })
+    );
+  });
+  return parsed;
+}
+
+function parseItemsFromTable(lines, options = {}) {
+  const {
+    headerRegex,
+    stopRegex = GOODS_STOP_WORDS,
+    baseConfidence = 0.82,
+    minNameLength = 4,
+    template = "GENERIC",
+    allowWithoutHeader = false,
+    acceptItemStartLine = null,
+  } = options;
+  const items = [];
+  let startIndex = findBestHeaderIndex(lines, headerRegex);
+  if (startIndex === -1) {
+    if (!allowWithoutHeader) return items;
+    startIndex = -1;
+  }
+
+  let current = null;
+  let syntheticAlphaIndex = 0;
+  const pushCurrent = (endIndex) => {
     if (!current) return;
-    const goodsName = sanitizeGoodsName(current.goodsName);
-    if (goodsName.length > 3) {
-      goods.push({
-        goodsName,
-        quantity: current.quantity > 0 ? current.quantity : 1,
-      });
+    let startText = stripTabularColumnsFromItemStart(current.buffer[0] || "");
+    const continuation = current.buffer
+      .slice(1)
+      .map((line) => stripTabularTail(line))
+      .join(" ");
+    if (
+      template === "CH38" &&
+      continuation &&
+      isLikelyGoodsSeed(continuation) &&
+      /[0-9]{3,}/.test(startText) &&
+      startText.split(/\s+/).length >= 3
+    ) {
+      startText = startText.split(/\s+/)[0];
+    }
+    const text = normalizeGoodsPhrase(`${startText} ${continuation}`.trim(), template);
+    if (text.length >= 4) {
+      const quantityFromStart = extractQuantityFromItemStart(current.buffer[0] || "");
+      const quantity = quantityFromStart || extractQuantityFromText(text);
+      const flags = [];
+      let effectiveQuantity = quantity;
+      if (template === "CKR" && effectiveQuantity > 20) {
+        effectiveQuantity = 1;
+        flags.push("quantity_inferred");
+      }
+      if (!quantityFromStart && quantity === 1) flags.push("quantity_inferred");
+      items.push(
+        createParsedGoodsLine({
+          rawName: text,
+          quantity: effectiveQuantity,
+          itemNo: current.itemNo,
+          extractionConfidence: baseConfidence,
+          flags,
+          sourceSpan: { start: current.start, end: endIndex },
+        })
+      );
     }
     current = null;
   };
 
-  lines.forEach((rawLine) => {
-    if (closed) return;
-    const cleaned = normalizeLine(rawLine);
-    if (!cleaned) return;
-    if (GOODS_STOP_WORDS.test(cleaned)) {
-      pushCurrent();
-      closed = true;
-      return;
+  for (let i = startIndex + 1; i < lines.length; i += 1) {
+    const line = normalizeLine(lines[i]);
+    if (!line) continue;
+    const looksLikeSectionStop =
+      stopRegex.test(line) ||
+      /^\d{1,2}[.)]?\s+v[ao]l\w*\s+o[f|r]?\s+p[uo]r/i.test(line) ||
+      /^[^a-z0-9]*(payment|project|delivery to|sitecontact|site contact|general instruction|date require|terms|please\s+call|plea[sg]e\s+call)/i.test(
+        line
+      );
+    if (looksLikeSectionStop && (current || items.length)) {
+      pushCurrent(i - 1);
+      break;
     }
-    if (/^(please|mof|model|payment|delivery|project|contact|date\s*require)/i.test(cleaned)) {
-      pushCurrent();
-      return;
+    if (looksLikeSectionStop) continue;
+    const numericItemStart = line.match(/^[^a-z0-9]{0,2}(\d{1,2})[.)]?\s+(.+)$/i);
+    const alphaItemStart = line.match(/^[^a-z0-9]{0,2}([a-z])[.)]?\s+(.+)$/i);
+    const byProductStart = line.match(/^by\s+(?:product|pruduct|procect|product\/type|procect\/lype|producttype)\b[:\-]?\s*(.+)?$/i);
+    let itemStart = null;
+    if (numericItemStart) {
+      itemStart = [numericItemStart[0], numericItemStart[1], numericItemStart[2]];
+    } else if (alphaItemStart) {
+      syntheticAlphaIndex += 1;
+      itemStart = [alphaItemStart[0], String(syntheticAlphaIndex), alphaItemStart[2]];
+    } else if (byProductStart && byProductStart[1]) {
+      syntheticAlphaIndex += 1;
+      itemStart = [byProductStart[0], String(syntheticAlphaIndex), byProductStart[1]];
     }
-
-    const itemized = cleaned.match(/^(?:\d{1,2}[.)]?|[A-Z][.)])\s+(.+)$/);
-    if (itemized && itemized[1]) {
-      pushCurrent();
-      const name = sanitizeGoodsName(itemized[1]);
-      if (/(instruction|terms|conditions|company)/i.test(name)) return;
+    if (itemStart && itemStart[2]) {
+      if (typeof acceptItemStartLine === "function" && !acceptItemStartLine(itemStart[2])) {
+        continue;
+      }
+      pushCurrent(i - 1);
       current = {
-        goodsName: name,
-        quantity: extractQuantityFromText(name),
+        itemNo: itemStart[1],
+        buffer: [itemStart[2]],
+        start: i,
       };
-      return;
+      continue;
     }
-
-    const qtyFirst = cleaned.match(/^(\d{1,3})\s+(?!\d{4,})(.+)$/);
-    if (qtyFirst && qtyFirst[2]) {
-      pushCurrent();
-      current = {
-        goodsName: sanitizeGoodsName(qtyFirst[2]),
-        quantity: toIntQuantity(qtyFirst[1]),
-      };
-      return;
-    }
-
-    const qtyLast = cleaned.match(/^(.+?)\s+(\d{1,3})\s*(?:x|pcs?|packs?|drums?|tins?|bags?)?$/i);
-    if (qtyLast && qtyLast[1]) {
-      pushCurrent();
-      current = {
-        goodsName: sanitizeGoodsName(qtyLast[1]),
-        quantity: toIntQuantity(qtyLast[2]),
-      };
-      return;
-    }
-
     if (current) {
-      current.goodsName = `${current.goodsName} ${sanitizeGoodsName(cleaned)}`.trim();
+      current.buffer.push(line);
     }
-  });
-
-  pushCurrent();
-
-  const deduped = [];
-  const seen = new Set();
-  goods.forEach((item) => {
-    const key = item.goodsName.toLowerCase();
-    if (seen.has(key)) return;
-    if (item.goodsName.length > 160) return;
-    if (/(purchase order|instruction|terms|conditions|company)/i.test(item.goodsName)) return;
-    seen.add(key);
-    deduped.push(item);
-  });
-  return deduped.slice(0, 10);
+  }
+  pushCurrent(lines.length - 1);
+  return items.filter((item) => item.parsedName.length >= minNameLength);
 }
 
-function parseGoodsFromPoStyle(lines) {
-  const goods = [];
-  lines.forEach((rawLine) => {
-    const cleaned = normalizeLine(rawLine);
-    if (!/^(?:\d{1,2}[.)]|[A-Z][.)])\s+/.test(cleaned)) return;
-    if (!/(type|typs?|ype|pack|drum|kg|chemical|ecotreat|labour|valve|bead|powder)/i.test(cleaned)) {
+function parseGenericGoods(lines) {
+  const productBlocks = parseGenericProductTypeBlocks(lines);
+  if (productBlocks.length) return productBlocks;
+  const headerRegex =
+    /(description|descrip|descr|item|product|scope\s+of\s+work|qty|quantity)/i;
+  return parseItemsFromTable(lines, {
+    headerRegex,
+    stopRegex:
+      /\b(subtotal|total|grand total|gst|tax|payment|remark|delivery\s*date|date\s*require|project|site\s*contact|contact\s*person|general instruction|value\s+of\s+purch|delivery\s+time|contact\s*person)\b/i,
+    baseConfidence: 0.62,
+    template: "GENERIC",
+    acceptItemStartLine: (line) =>
+      isLikelyGoodsSeed(line) ||
+      /\b(?:product|procect|pruduct)\s*(?:\/|\s*)\s*(?:type|lype)\b/i.test(
+        normalizeLine(line)
+      ),
+  });
+}
+
+function parseTemplateGoods(template, lines) {
+  if (template === "CH38") {
+    return parseItemsFromTable(lines, {
+      headerRegex: /(description|desen|item#?|qty|quantity)/i,
+      baseConfidence: 0.9,
+      template,
+      acceptItemStartLine: (line) =>
+        isLikelyGoodsSeed(line) ||
+        /\b(cheri|ghemi|chemic|ecot|anion|powder|copoly|a30|l28)\b/i.test(
+          normalizeLine(line)
+        ),
+    });
+  }
+  if (template === "CKR") {
+    return parseItemsFromTable(lines, {
+      headerRegex: /(description|qty|unitprice|amount)/i,
+      baseConfidence: 0.9,
+      template,
+      acceptItemStartLine: (line) =>
+        isLikelyGoodsSeed(line) ||
+        /\b(to\s*supply|labou?r|motori|valve|sludge|model|ecot|a30|wpc)\b/i.test(
+          normalizeLine(line)
+        ),
+    });
+  }
+  if (template === "CR") {
+    const parsed = parseItemsFromTable(lines, {
+      headerRegex: /(sno|description|qty|amount)/i,
+      baseConfidence: 0.82,
+      template,
+      allowWithoutHeader: true,
+      acceptItemStartLine: (line) => isLikelyGoodsSeed(line),
+    });
+    if (parsed.length) return parsed;
+    const seeded = parseItemsFromTable(lines, {
+      headerRegex: /(ecot|eco|treat|coagul|kg\/tin|kg\/drum)/i,
+      baseConfidence: 0.7,
+      template,
+      allowWithoutHeader: true,
+      acceptItemStartLine: (line) => isLikelyGoodsSeed(line),
+    });
+    if (seeded.length) return seeded;
+    const purchaseOrderIndex = lines.findIndex((line) => /purchase order/i.test(line));
+    if (purchaseOrderIndex >= 0) {
+      const numbered = parseItemsFromTable(lines.slice(purchaseOrderIndex + 1), {
+        headerRegex: /^$/,
+        baseConfidence: 0.68,
+        template,
+        allowWithoutHeader: true,
+        acceptItemStartLine: (line) => normalizeLine(line).length >= 8,
+      }).map((line) => ({
+        ...line,
+        sourceSpan: line.sourceSpan
+          ? {
+              start: line.sourceSpan.start + purchaseOrderIndex + 1,
+              end: line.sourceSpan.end + purchaseOrderIndex + 1,
+            }
+          : null,
+      }));
+      if (numbered.length) return numbered;
+    }
+    const fallback = [];
+    for (let i = 0; i < lines.length; i += 1) {
+      const line = normalizeLine(lines[i]);
+      if (!isLikelyGoodsSeed(line)) continue;
+      const next = normalizeLine(lines[i + 1] || "");
+      const mergeNext = template !== "CR" && isLikelyGoodsSeed(next);
+      const text = normalizeGoodsPhrase(`${line} ${mergeNext ? next : ""}`, template);
+      if (text.length < 8) continue;
+      fallback.push(
+        createParsedGoodsLine({
+          rawName: text,
+          quantity: extractQuantityFromText(text),
+          extractionConfidence: 0.65,
+          flags: ["quantity_inferred"],
+          sourceSpan: { start: i, end: mergeNext ? i + 1 : i },
+        })
+      );
+      i += mergeNext ? 1 : 0;
+      if (fallback.length >= 4) break;
+    }
+    return fallback;
+  }
+  return [];
+}
+
+function dedupeParsedGoodsLines(lines) {
+  const deduped = [];
+  lines.forEach((line) => {
+    if (!line || !line.parsedName) return;
+    if (!deduped.length) {
+      deduped.push(line);
       return;
     }
-    const name = sanitizeGoodsName(cleaned.replace(/^(?:\d{1,2}[.)]|[A-Z][.)])\s+/, ""));
-    if (!name || name.length < 4) return;
-    goods.push({
-      goodsName: name,
-      quantity: extractQuantityFromText(name),
-    });
+    const prev = deduped[deduped.length - 1];
+    const similarity = jaccardSimilarity(prev.parsedName, line.parsedName);
+    if (similarity >= 0.92) {
+      prev.flags = Array.from(new Set([...(prev.flags || []), ...(line.flags || []), "duplicate_collapsed"]));
+      prev.extractionConfidence = Math.max(prev.extractionConfidence || 0, line.extractionConfidence || 0);
+      return;
+    }
+    deduped.push(line);
   });
-  return goods.slice(0, 8);
+  return deduped.slice(0, 12);
+}
+
+function scoreExtractionLines(lines, template) {
+  return (lines || []).map((line) => {
+    const name = String(line.parsedName || "");
+    let score = clampConfidence(line.extractionConfidence || 0.6);
+    if (template === "GENERIC") score -= 0.07;
+    if (name.length < 10) score -= 0.08;
+    const oddChars = (name.match(/[^a-z0-9 ()\/\-]/gi) || []).length;
+    if (name.length && oddChars / name.length > 0.18) score -= 0.08;
+    if ((line.flags || []).includes("quantity_inferred")) score -= 0.04;
+    if (/\b(purchase order|pte ltd|invoice|requisition|page)\b/i.test(name)) score -= 0.18;
+    if (/\b(model|ecotreat|chemical|valve|sludge|powder|coagulant)\b/i.test(name)) score += 0.05;
+    score = clampConfidence(score);
+    const flags = [...(line.flags || [])];
+    if (score < EXTRACTION_LOW_THRESHOLD) flags.push("low_extraction_confidence");
+    return {
+      ...line,
+      extractionConfidence: score,
+      flags: Array.from(new Set(flags)),
+    };
+  });
+}
+
+function computeInventoryMatchScore(goodsLine, inventoryItem) {
+  const query = `${goodsLine.parsedName || ""}`;
+  const candidate = `${inventoryItem.name || ""} ${(inventoryItem.keywords || []).join(" ")}`;
+  const tokenScore = jaccardSimilarity(query, candidate);
+  const queryNumbers = extractNumericTokens(query);
+  const candidateNumbers = new Set(extractNumericTokens(candidate));
+  const numericScore = queryNumbers.length
+    ? queryNumbers.filter((token) => candidateNumbers.has(token)).length / queryNumbers.length
+    : 0.75;
+  const queryUnit = extractUnit(query);
+  const candidateUnit = extractUnit(candidate);
+  const unitScore = queryUnit ? (queryUnit === candidateUnit ? 1 : 0.25) : 0.75;
+  const score = 0.6 * tokenScore + 0.25 * numericScore + 0.15 * unitScore;
+  return clampConfidence(score);
+}
+
+async function matchGoodsToInventory(goodsLines) {
+  if (!Array.isArray(goodsLines) || !goodsLines.length) return goodsLines || [];
+  if (!mongoose || !mongoose.connection || mongoose.connection.readyState !== 1) {
+    return goodsLines.map((line) => ({
+      ...line,
+      flags: Array.from(new Set([...(line.flags || []), "inventory_match_unavailable"])),
+      match: { autoMatched: false },
+    }));
+  }
+  let activeItems = [];
+  try {
+    activeItems = await InventoryItem.find({ isActive: true })
+      .select("_id name keywords category")
+      .lean();
+  } catch (error) {
+    return goodsLines.map((line) => ({
+      ...line,
+      flags: Array.from(new Set([...(line.flags || []), "inventory_match_unavailable"])),
+      match: { autoMatched: false },
+    }));
+  }
+  if (!activeItems.length) return goodsLines;
+
+  return goodsLines.map((line) => {
+    let best = null;
+    activeItems.forEach((item) => {
+      const score = computeInventoryMatchScore(line, item);
+      if (!best || score > best.score) {
+        best = { item, score };
+      }
+    });
+    const flags = [...(line.flags || [])];
+    const match = { autoMatched: false };
+    if (best && best.score >= EFFECTIVE_MATCH_HIGH) {
+      match.inventoryItemId = String(best.item._id);
+      match.inventoryName = best.item.name;
+      match.matchConfidence = Number(best.score.toFixed(3));
+      match.autoMatched = true;
+    } else if (best && best.score >= MATCH_MEDIUM_THRESHOLD) {
+      match.inventoryItemId = String(best.item._id);
+      match.inventoryName = best.item.name;
+      match.matchConfidence = Number(best.score.toFixed(3));
+      match.autoMatched = false;
+      flags.push("low_match_confidence");
+    } else {
+      flags.push("low_match_confidence");
+    }
+    return {
+      ...line,
+      flags: Array.from(new Set(flags)),
+      match,
+    };
+  });
 }
 
 function extractCrDeliveryFallback(lines) {
@@ -587,27 +1318,11 @@ function extractCrDeliveryFallback(lines) {
   return candidates.sort((a, b) => b.length - a.length)[0];
 }
 
-function parseGoodsFromCrStyle(lines) {
-  const goods = [];
-  lines.forEach((rawLine) => {
-    const cleaned = normalizeLine(rawLine);
-    const itemized = cleaned.match(/^(\d{1,2})\s+(.+)$/);
-    if (!itemized || !itemized[2]) return;
-    const name = sanitizeGoodsName(itemized[2]);
-    if (!name || name.length < 5) return;
-    if (/(page|pono|date|delivery|instruction|term)/i.test(name)) return;
-    goods.push({
-      goodsName: name,
-      quantity: toIntQuantity(itemized[1]),
-    });
-  });
-  return goods.slice(0, 6);
-}
-
 function parseDocumentText(rawText, options = {}) {
   const text = normalizeText(rawText);
   const lines = text.split("\n").map((line) => line.trim());
   const nonEmptyLines = lines.filter((line) => NON_EMPTY_LINE.test(line));
+  const template = detectDocumentTemplate(text, options.fileName || "");
 
   const invoicePatterns = [
     /\binvoice\s*(?:no\.?|number|#|num|n[o0])\s*[:\-]?\s*([A-Z0-9][A-Z0-9/-]{2,})/gi,
@@ -632,38 +1347,13 @@ function parseDocumentText(rawText, options = {}) {
   const emailMatch = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
   const phoneMatch = extractPhone(nonEmptyLines);
 
-  const goodsStartIndex = nonEmptyLines.findIndex((line) => {
-    const lower = String(line || "").toLowerCase();
-    const looksLikeDescHeader =
-      /(description|descrip|descr|desen|scope\s+of\s+work|description\s+of\s+work)/i.test(
-        lower
-      ) && /(qty|quantity|uom|unit|amount|price|item|product)/i.test(lower);
-    const looksLikeWorkHeader =
-      /(description\s+of\s+work|scope\s+of\s+work|descrip\w*\s+of\s+wor)/i.test(
-        lower
-      );
-    return looksLikeDescHeader || looksLikeWorkHeader;
-  });
-  const goodsLines =
-    goodsStartIndex >= 0
-      ? nonEmptyLines.slice(goodsStartIndex + 1, goodsStartIndex + 40)
-      : [];
-  let goods = parseGoodsLines(goodsLines);
-  if (!goods.length) {
-    const baseName = String(options.fileName || "")
-      .toLowerCase()
-      .replace(/\.pdf$/i, "");
-    if (/^po[-_]/.test(baseName)) {
-      goods = parseGoodsFromPoStyle(nonEmptyLines);
-    } else if (/^cr[-_]/.test(baseName)) {
-      goods = parseGoodsFromCrStyle(nonEmptyLines);
-    }
-  }
+  let goods = parseTemplateGoods(template, nonEmptyLines);
+  if (!goods.length) goods = parseGenericGoods(nonEmptyLines);
+  goods = dedupeParsedGoodsLines(goods);
+  goods = scoreExtractionLines(goods, template);
+
   if (!deliveryAddress) {
-    const baseName = String(options.fileName || "")
-      .toLowerCase()
-      .replace(/\.pdf$/i, "");
-    if (/^cr[-_]/.test(baseName)) {
+    if (template === "CR") {
       const fallback = extractCrDeliveryFallback(nonEmptyLines);
       if (fallback) {
         deliveryAddress = fallback;
@@ -681,8 +1371,13 @@ function parseDocumentText(rawText, options = {}) {
   if (usedCrDeliveryFallback) warnings.push("delivery_inferred_from_text");
   if (!deliveryAddress) warnings.push("deliveryAddress_not_found");
   if (!goods.length) warnings.push("goods_not_found");
+  if (goods.some((line) => (line.flags || []).includes("low_extraction_confidence"))) {
+    warnings.push("low_confidence_goods_present");
+    warnings.push("manual_review_recommended");
+  }
 
   return {
+    template,
     invoiceNumber,
     poNumber,
     deliveryAddress,
@@ -693,6 +1388,87 @@ function parseDocumentText(rawText, options = {}) {
     goods,
     warnings,
   };
+}
+
+function scoreParsedDocumentCandidate(parsed) {
+  if (!parsed) return -9999;
+  const goods = Array.isArray(parsed.goods) ? parsed.goods : [];
+  const template = String(parsed.template || "GENERIC");
+  if (!goods.length) {
+    return parsed.warnings && parsed.warnings.includes("goods_not_found") ? -800 : -500;
+  }
+  const extractionScore = goods.reduce((acc, line) => {
+    const confidence = Number(line.extractionConfidence || 0);
+    const name = String(line.parsedName || "");
+    const domainBoost = GOODS_DOMAIN_WORDS.test(name.toLowerCase()) ? 0.08 : 0;
+    const nonGoodsPenalty = /\b(purchase order|invoice|pte ltd|requisition)\b/i.test(name) ? 0.22 : 0;
+    const totalsPenalty = /\b(total|gst|discount|amount|unit\s*price|payment|remark)\b/i.test(name)
+      ? 0.28
+      : 0;
+    const longLinePenalty = name.length > 140 ? 0.22 : 0;
+    const denseDigitPenalty = ((name.match(/\d/g) || []).length / Math.max(1, name.length)) > 0.2 ? 0.15 : 0;
+    const badCharRatio = name.length
+      ? (name.match(/[^a-z0-9 ()\/\-]/gi) || []).length / name.length
+      : 1;
+    const penalty = badCharRatio > 0.16 ? 0.12 : 0;
+    return (
+      acc +
+      confidence +
+      domainBoost -
+      penalty -
+      nonGoodsPenalty -
+      totalsPenalty -
+      longLinePenalty -
+      denseDigitPenalty
+    );
+  }, 0);
+  const domainLineCount = goods.filter((line) =>
+    GOODS_DOMAIN_WORDS.test(String(line.parsedName || "").toLowerCase())
+  ).length;
+  const longLinePenaltyScore = goods.reduce((acc, line) => {
+    const len = String(line.parsedName || "").length;
+    return acc + (len > 140 ? 70 : 0);
+  }, 0);
+  const totalsLineCount = goods.filter((line) =>
+    /\b(total|gst|discount|amount|unit\s*price|payment|remark)\b/i.test(
+      String(line.parsedName || "")
+    )
+  ).length;
+  const lowFlags = goods.reduce(
+    (acc, line) => acc + ((line.flags || []).includes("low_extraction_confidence") ? 1 : 0),
+    0
+  );
+  const warningsPenalty = (parsed.warnings || []).reduce(
+    (acc, warning) => acc + (warning === "goods_not_found" ? 260 : warning === "manual_review_recommended" ? 90 : 0),
+    0
+  );
+  const noDomainPenalty = domainLineCount === 0 ? 240 : 0;
+  const tooManyItemsPenalty =
+    (template === "CH38" || template === "CKR") && goods.length > 3
+      ? (goods.length - 3) * 140
+      : 0;
+  return (
+    goods.length * 220 +
+    Math.round(extractionScore * 100) -
+    lowFlags * 80 -
+    warningsPenalty -
+    noDomainPenalty -
+    longLinePenaltyScore -
+    totalsLineCount * 120 -
+    tooManyItemsPenalty
+  );
+}
+
+function chooseBestParsedCandidate(candidates) {
+  if (!Array.isArray(candidates) || !candidates.length) return null;
+  let best = null;
+  candidates.forEach((candidate) => {
+    const score = scoreParsedDocumentCandidate(candidate.parsed);
+    if (!best || score > best.score) {
+      best = { ...candidate, score };
+    }
+  });
+  return best;
 }
 
 function parseDriverCoord(loc) {
@@ -1695,15 +2471,57 @@ exports.parseDocument = [
 
     let text = "";
     const parsingWarnings = [];
+    const parseCandidates = [];
+    const candidateKeys = new Set();
+    const addParseCandidate = (candidateText, label) => {
+      const normalized = normalizeText(candidateText);
+      if (!normalized) return;
+      const key = normalized;
+      if (candidateKeys.has(key)) return;
+      candidateKeys.add(key);
+      parseCandidates.push({
+        label,
+        text: normalized,
+        parsed: parseDocumentText(normalized, { fileName: name }),
+      });
+    };
     if (isPdf) {
-      const parsed = await pdfParse(req.file.buffer);
-      text = parsed.text || "";
+      const pdftotextResult = await extractTextFromPdfPdftotext(req.file.buffer);
+      parsingWarnings.push(...(pdftotextResult.warnings || []));
+      const pdftotextText = normalizeText(pdftotextResult.text || "");
+      if (pdftotextText) {
+        text = pdftotextText;
+        addParseCandidate(pdftotextText, "pdftotext");
+        parsingWarnings.push("pdf_text_extracted_by_pdftotext");
+      }
+
+      const pdfParsed = await pdfParse(req.file.buffer);
+      const pdfParseText = normalizeText(pdfParsed.text || "");
+      if (pdfParseText) addParseCandidate(pdfParseText, "pdf-parse");
+      if (pdftotextText && pdfParseText && pdftotextText !== pdfParseText) {
+        addParseCandidate([pdftotextText, pdfParseText].join("\n"), "pdftotext+pdfparse");
+      }
+      if (!text || pdfParseText.length > text.length) {
+        text = pdfParseText;
+      }
       if (normalizeText(text).length < MIN_EXTRACTABLE_TEXT_LENGTH) {
         const ocr = await extractTextFromPdfOcr(req.file.buffer);
         parsingWarnings.push(...(ocr.warnings || []));
-        if (ocr.text) {
-          text = [normalizeText(text), ocr.text].filter(Boolean).join("\n");
+        const ocrCandidates = [
+          ...(Array.isArray(ocr.candidates) ? ocr.candidates : []),
+          ...(ocr.text ? [{ text: ocr.text, label: "ocr-best" }] : []),
+        ];
+        if (ocrCandidates.length) {
           parsingWarnings.push("pdf_ocr_applied");
+          ocrCandidates.forEach((candidate) => {
+            const combined = [text, candidate.text || ""].filter(Boolean).join("\n");
+            addParseCandidate(combined, `pdf+${candidate.label || "ocr"}`);
+          });
+          if (!text && ocr.text) {
+            text = ocr.text;
+          } else if (ocr.text) {
+            text = [text, ocr.text].filter(Boolean).join("\n");
+          }
         }
       }
       if (normalizeText(text).length < MIN_EXTRACTABLE_TEXT_LENGTH) {
@@ -1718,9 +2536,33 @@ exports.parseDocument = [
       } finally {
         await worker.terminate();
       }
+      addParseCandidate(text, "image-ocr");
     }
 
-    const parsed = parseDocumentText(text, { fileName: name });
+    if (!parseCandidates.length) {
+      addParseCandidate(text, "fallback");
+    }
+    const selectedCandidate = chooseBestParsedCandidate(parseCandidates);
+    const parsed = selectedCandidate
+      ? selectedCandidate.parsed
+      : parseDocumentText(text, { fileName: name });
+    parsed.goods = await matchGoodsToInventory(parsed.goods || []);
+
+    if (
+      parsed.goods.some((line) => (line.flags || []).includes("inventory_match_unavailable"))
+    ) {
+      parsed.warnings.push("inventory_match_unavailable");
+      parsed.warnings.push("manual_review_recommended");
+    }
+
+    if (
+      parsed.goods.some((line) => (line.flags || []).includes("low_match_confidence")) &&
+      !parsed.warnings.includes("low_confidence_goods_present")
+    ) {
+      parsed.warnings.push("low_confidence_goods_present");
+      parsed.warnings.push("manual_review_recommended");
+    }
+
     if (!parsed.poNumber) {
       const poFromFilename = inferPoNumberFromFilename(name);
       if (poFromFilename) {

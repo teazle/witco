@@ -1,6 +1,21 @@
-mat-card {
+.page-card {
+    background: hsl(0 0% 100% / 0.98) !important;
+    border: 1px solid hsl(var(--border) / 0.92) !important;
+    box-shadow: var(--card-shadow) !important;
+    color: hsl(var(--foreground));
     max-height: calc(100% - 128px) !important;
     overflow: auto;
+}
+
+.page-card .page-title,
+.page-card .content-wrap,
+.page-card mat-list-item,
+.page-card .section-heading {
+    color: hsl(var(--foreground));
+}
+
+.page-card mat-divider {
+    border-top-color: hsl(var(--border));
 }
 
 .address {
@@ -8,12 +23,32 @@ mat-card {
     overflow: auto;
 }
 
-table {
-    width: 100%;
-}
-
 .inner-table {
     overflow-x: auto;
+    border: 1px solid hsl(var(--border) / 0.9);
+    border-radius: 12px;
+    background: hsl(0 0% 100% / 0.98);
+    padding: 4px;
+}
+
+.inner-table .mat-table,
+.inner-table .table-shell {
+    width: 100%;
+    background: hsl(0 0% 100% / 0.98) !important;
+}
+
+.inner-table .mat-header-cell {
+    background: hsl(var(--surface-table-header)) !important;
+    color: hsl(var(--text-high)) !important;
+}
+
+.inner-table .mat-cell {
+    background: hsl(var(--surface-table-row)) !important;
+    color: hsl(var(--text-high)) !important;
+}
+
+.inner-table .mat-row:nth-child(even) .mat-cell {
+    background: hsl(var(--surface-table-row-alt)) !important;
 }
 
 .section-heading {
@@ -72,7 +107,7 @@ table {
 }
 
 @media (max-width: 767px) {
-    mat-card {
+    .page-card {
         max-height: calc(100% - 84px) !important;
     }
 

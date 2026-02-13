@@ -65,9 +65,18 @@
                 <div class="draft-row">
                     <mat-checkbox [(ngModel)]="draftOptions.goods">Goods</mat-checkbox>
                     <div class="draft-value">
-                        <span *ngIf="parsedDraft.goods?.length; else noGoods">
-                            <span *ngFor="let item of parsedDraft.goods; let last = last">
-                                {{item.goodsName}} ({{item.quantity}}){{last ? '' : ', '}}
+                        <span *ngIf="parsedDraft.goods?.length; else noGoods" class="goods-preview-list">
+                            <span *ngFor="let item of parsedDraft.goods" class="goods-preview-item" [class.goods-preview-item--warn]="isLowConfidenceGoods(item)">
+                                <span class="goods-preview-item__name">{{getGoodsDisplayName(item)}} ({{item.quantity}})</span>
+                                <span class="goods-preview-item__meta">
+                                    <span class="goods-confidence">Confidence {{getGoodsConfidencePercent(item)}}%</span>
+                                    <span *ngIf="item.match?.inventoryName">
+                                        | Match: {{item.match.inventoryName}}
+                                        <span *ngIf="item.match?.matchConfidence">({{(item.match.matchConfidence * 100) | number:'1.0-0'}}%)</span>
+                                        <span *ngIf="item.match?.autoMatched"> auto</span>
+                                    </span>
+                                    <span *ngIf="item.flags?.length"> | Flags: {{item.flags.join(', ')}}</span>
+                                </span>
                             </span>
                         </span>
                         <ng-template #noGoods>-</ng-template>

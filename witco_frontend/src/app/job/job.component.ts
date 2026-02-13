@@ -221,6 +221,27 @@ export class JobComponent implements OnInit,AfterViewInit {
     });
   }
 
+  getGoodsDisplayName(item: any): string {
+    if (!item) return '';
+    return item.parsedName || item.goodsName || item.rawName || '';
+  }
+
+  getGoodsConfidencePercent(item: any): number {
+    const confidence = Number(item && item.extractionConfidence);
+    if (!Number.isFinite(confidence)) return 0;
+    return Math.max(0, Math.min(100, Math.round(confidence * 100)));
+  }
+
+  isLowConfidenceGoods(item: any): boolean {
+    const flags = item && Array.isArray(item.flags) ? item.flags : [];
+    return flags.includes('low_extraction_confidence') || flags.includes('low_match_confidence');
+  }
+
+  hasLowConfidenceGoods(data: any): boolean {
+    if (!data || !Array.isArray(data.goods)) return false;
+    return data.goods.some((item) => this.isLowConfidenceGoods(item));
+  }
+
   applyParsedData(data: any, options?: any) {
     const selected = options || this.draftOptions;
     const name = (data.customerName || '').trim();
@@ -269,7 +290,7 @@ export class JobComponent implements OnInit,AfterViewInit {
       }
       data.goods.forEach((item) => {
         const good = this.fb.group({
-          goodsName: [item.goodsName || '', Validators.required],
+          goodsName: [this.getGoodsDisplayName(item) || '', Validators.required],
           quantity: [item.quantity || '', Validators.compose([Validators.required, Validators.pattern("^[0-9]*$")])],
         });
         this.goods.push(good);
@@ -280,8 +301,13 @@ export class JobComponent implements OnInit,AfterViewInit {
   applyDraft() {
     if (!this.parsedDraft) return;
     this.applyParsedData(this.parsedDraft, this.draftOptions);
+    const hasLowConfidence = this.hasLowConfidenceGoods(this.parsedDraft);
     this.parsedDraft = null;
-    this.toastService.success('Draft applied.');
+    if (hasLowConfidence) {
+      this.toastService.warning('Draft applied with low-confidence goods. Please review before submit.');
+    } else {
+      this.toastService.success('Draft applied.');
+    }
   }
 
   discardDraft() {

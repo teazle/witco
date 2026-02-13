@@ -2,29 +2,39 @@
     <div class="page-header">
         <h5 class="page-title">My Jobs</h5>
     </div>
-    <div class="table-wrap">
-    <table mat-table [dataSource]="dataSource" class="table-shell mat-elevation-z8">
+    <div class="jobs-wrap">
+        <div class="jobs-grid" *ngIf="dataSource.data.length; else noJobs">
+            <div class="job-card" *ngFor="let element of dataSource.data; let i = index">
+                <div class="job-card__header">
+                    <span class="job-card__index">#{{i + 1}}</span>
+                    <span class="job-card__invoice">DO {{element.invoiceNumber || '-'}}</span>
+                    <span class="job-card__status" [class.job-card__status--done]="router.url.includes('Delivered')">
+                        {{router.url.includes('Delivering') ? 'In Progress' : 'Delivered'}}
+                    </span>
+                </div>
 
-        <!-- Position Column -->
-        <ng-container matColumnDef="srno">
-            <th mat-header-cell *matHeaderCellDef> No. </th>
-            <td mat-cell *matCellDef="let element;let i=index"> {{i+1}} </td>
-        </ng-container>
+                <div class="job-card__customer">{{(element.customer_firstName || '') + ' ' + (element.customer_lastName || '')}}</div>
+                <div class="job-card__address">
+                    {{element.deliveryAddress || element.customer_deliveryAddress || '-'}}
+                </div>
 
-        <ng-container matColumnDef="customer">
-            <th mat-header-cell *matHeaderCellDef> Name </th>
-            <td mat-cell *matCellDef="let element"> {{element.customer_firstName}} {{element.customer_lastName}}</td>
-        </ng-container>
+                <div class="job-card__actions">
+                    <button mat-stroked-button type="button" (click)="showAddress(address)">
+                        <mat-icon>visibility</mat-icon>
+                        View Address
+                    </button>
 
-        <ng-container matColumnDef="invoiceNumber">
-            <th mat-header-cell *matHeaderCellDef> DO Number </th>
-            <td mat-cell *matCellDef="let element"> {{element.invoiceNumber}} </td>
-        </ng-container>
+                    <button *ngIf="router.url.includes('Delivering')" mat-raised-button color="primary" type="button"
+                        (click)="completeOrder(element)">
+                        Submit Delivery
+                    </button>
 
-        <ng-container matColumnDef="deliveryAddress">
-            <th mat-header-cell *matHeaderCellDef> Address </th>
-            <td mat-cell *matCellDef="let element">
-                <mat-icon (click)="showAddress(address)">visibility</mat-icon>
+                    <div *ngIf="router.url.includes('Delivered')" class="done-pill">
+                        <mat-icon>done</mat-icon>
+                        Completed
+                    </div>
+                </div>
+
                 <ng-template #address class="address-model">
                     <h1 mat-dialog-title class="text-center">Delivery Address</h1>
                     <mat-divider></mat-divider>
@@ -32,37 +42,21 @@
                         <p class="text">{{element.deliveryAddress || element.customer_deliveryAddress}}</p>
                     </div>
                     <div mat-dialog-actions class="btn">
-                        <button mat-button data-toggle="tooltip" title="Locatin" class="mapbutton"
-                            *ngIf="element.zipcode" (click)="openlocation(element.zipcode)">
+                        <button mat-button data-toggle="tooltip" title="Location" class="mapbutton" *ngIf="element.zipcode"
+                            (click)="openlocation(element.zipcode)">
                             Open Map
-                            <mat-icon  class="location">location_on</mat-icon>
+                            <mat-icon class="location">location_on</mat-icon>
                         </button>
                         <button mat-button mat-dialog-close cdkFocusInitial color="primary">Ok</button>
                     </div>
                 </ng-template>
-            </td>
-        </ng-container>
-
-        <ng-container matColumnDef="action" *ngIf="router.url.includes('Delivering')">
-            <th mat-header-cell *matHeaderCellDef> Action </th>
-            <td mat-cell *matCellDef="let element">
-                <div class="next-btn">
-                    <button mat-mini-fab color="primary"><mat-icon
-                            (click)="completeOrder(element)">navigate_next</mat-icon></button>
-                </div>
-            </td>
-        </ng-container>
-        <ng-container matColumnDef="action" *ngIf="router.url.includes('Delivered')">
-            <th mat-header-cell *matHeaderCellDef>Delivered</th>
-            <td mat-cell *matCellDef="let element">
-                <mat-icon style="color:green">done</mat-icon>
-            </td>
-        </ng-container>
-        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-    </table>
-        <div *ngIf="!dataSource.data.length">
-            <h4 class="text-center">No Jobs Available</h4>
+            </div>
         </div>
+
+        <ng-template #noJobs>
+            <div class="jobs-empty">
+                <h4>No Jobs Available</h4>
+            </div>
+        </ng-template>
     </div>
 </mat-card>
