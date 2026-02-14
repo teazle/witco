@@ -993,6 +993,7 @@ function normalizePersonName(value) {
     "terms",
     "contact",
     "person",
+    "at",
   ]);
   const cleanedTokens = [];
   for (const token of tokens) {
@@ -1040,24 +1041,43 @@ function extractCustomerIdentity(lines, template = "GENERIC") {
   let customerName = "";
   let customerCompany = "";
 
-  const topLines = (lines || []).slice(0, 30);
+  const topLines = (lines || []).slice(0, 90);
+  const hasInternalWitcoContext = (index) => {
+    const start = Math.max(0, index - 4);
+    const end = Math.min(topLines.length - 1, index + 3);
+    const nearby = topLines.slice(start, end + 1).join(" ").toLowerCase();
+    return /\b(?:witco|envirotech)\b/.test(nearby);
+  };
 
   const personCandidates = [];
   topLines.forEach((line, index) => {
+    const orderByMatch = line.match(/\border\s*by\b\s*[:.\-|]?\s*(.+)$/i);
+    if (orderByMatch && orderByMatch[1]) {
+      const normalized = normalizePersonName(orderByMatch[1]);
+      if (normalized) personCandidates.push({ value: normalized, score: 10, index });
+    }
     const attnMatch = line.match(/\b(?:attn|atin|attention)\b\s*(?:to)?\s*[:.\-|]?\s*(.+)$/i);
     if (attnMatch && attnMatch[1]) {
       const normalized = normalizePersonName(attnMatch[1]);
-      if (normalized) personCandidates.push({ value: normalized, score: 7, index });
+      if (normalized && !hasInternalWitcoContext(index)) {
+        personCandidates.push({ value: normalized, score: 7, index });
+      }
     }
     const paymentTermsLead = line.match(/\b([A-Za-z][A-Za-z.'-]{1,20}(?:\s+[A-Za-z][A-Za-z.'-]{1,20}){0,2})\s+payment\s*terms\b/i);
     if (paymentTermsLead && paymentTermsLead[1]) {
       const normalized = normalizePersonName(paymentTermsLead[1]);
-      if (normalized) personCandidates.push({ value: normalized, score: 6, index });
+      if (normalized && !hasInternalWitcoContext(index)) {
+        personCandidates.push({ value: normalized, score: 6, index });
+      }
     }
     const contactMatch = line.match(/\b(?:contact\s*person|site\s*contact\s*person)\b\s*[:.\-|]?\s*(.+)$/i);
     if (contactMatch && contactMatch[1]) {
       const normalized = normalizePersonName(contactMatch[1]);
-      if (normalized) personCandidates.push({ value: normalized, score: 5, index });
+      if (normalized) {
+        // Keep primary person when multiple contacts are listed (e.g., "Kamal or Rama").
+        const primary = normalizePersonName(normalized.split(/\b(?:or|\/|&|,)\b/i)[0] || normalized);
+        personCandidates.push({ value: primary || normalized, score: 9, index });
+      }
     }
   });
 
