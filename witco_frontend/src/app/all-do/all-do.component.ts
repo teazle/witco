@@ -306,7 +306,11 @@ export class AllDoComponent implements OnInit {
           if (res) {
             this.authService.setLoader(false);
             this.toastService.success('Job Deleted successfully');
-            this.deliveringOrder();
+            const isLastRowOnPage = this.dataSource.data.length === 1 && this.currentPage > 0;
+            if (isLastRowOnPage) {
+              this.currentPage -= 1;
+            }
+            this.searchJobs();
           }
         }, err => {
           this.authService.setLoader(false);

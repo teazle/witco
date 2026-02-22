@@ -1,4 +1,16 @@
 <mat-card class="page-card">
+  <div class="page-header">
+    <div class="page-title-wrap">
+      <h5 class="page-title">Dispatch Board</h5>
+      <p class="page-subtitle">Drag jobs into driver lanes, optimize with AI, then dispatch in one click.</p>
+    </div>
+    <div class="page-actions">
+      <button mat-flat-button color="primary" type="button" (click)="addJob()">
+        <mat-icon>add_circle</mat-icon>
+        Add Jobs
+      </button>
+    </div>
+  </div>
   <div class="form-toolbar date-toolbar">
     <mat-form-field appearance="outline" (click)="inTimeCalendar.open()">
       <mat-label>From Date</mat-label>
@@ -23,15 +35,32 @@
   </div>
 </mat-card>
 
-<mat-card class="page-card board-toolbar-card">
-  <div class="page-header board-toolbar__header">
-    <h5 class="page-title">Dispatch Board</h5>
-    <div class="page-actions">
-      <button mat-flat-button color="primary" type="button" (click)="addJob()">
-        Add Jobs
-      </button>
+<mat-card class="page-card board-summary-card">
+  <div class="board-summary">
+    <div class="summary-item">
+      <span class="summary-label">Total Pending</span>
+      <strong class="summary-value">{{totalJobsCount}}</strong>
+    </div>
+    <div class="summary-item summary-item--warn">
+      <span class="summary-label">Unassigned</span>
+      <strong class="summary-value">{{unassignedCount}}</strong>
+    </div>
+    <div class="summary-item summary-item--accent">
+      <span class="summary-label">Assigned</span>
+      <strong class="summary-value">{{assignedJobsCount}}</strong>
+    </div>
+    <div class="summary-item">
+      <span class="summary-label">Active Drivers</span>
+      <strong class="summary-value">{{activeDriversCount}}</strong>
+    </div>
+    <div class="summary-item summary-item--ai" *ngIf="dispatchPlanId">
+      <span class="summary-label">AI Draft</span>
+      <strong class="summary-value">Saved</strong>
     </div>
   </div>
+</mat-card>
+
+<mat-card class="page-card board-toolbar-card">
   <div class="form-toolbar board-toolbar__controls">
     <mat-form-field appearance="outline">
       <mat-label>Depot Address (optional)</mat-label>
@@ -69,17 +98,28 @@
 <mat-card class="page-card board-card">
   <mat-card-content class="content-wrap board-content">
     <div class="board" cdkDropListGroup>
-      <div class="column" *ngFor="let column of columns">
+      <div class="column"
+        *ngFor="let column of columns; trackBy: trackByColumn"
+        [ngClass]="{
+          'column--unassigned': column.id === 'unassigned',
+          'column--active': column.id !== 'unassigned' && column.jobs.length > 0
+        }">
         <div class="column-header">
           <h6>{{column.title}}</h6>
           <span class="count">{{column.jobs.length}} jobs</span>
+          <span class="lane-type" *ngIf="column.id === 'unassigned'">Queue</span>
+          <span class="lane-type lane-type--driver" *ngIf="column.id !== 'unassigned'">Driver Lane</span>
           <span class="driver-email" *ngIf="column.driverEmail">{{column.driverEmail}}</span>
         </div>
         <div class="column-body"
-            cdkDropList
-            [cdkDropListData]="column.jobs"
-            (cdkDropListDropped)="drop($event, column)">
-          <div class="job-card" *ngFor="let job of column.jobs; let i = index" cdkDrag>
+          cdkDropList
+          [cdkDropListData]="column.jobs"
+          (cdkDropListDropped)="drop($event, column)">
+          <div class="column-empty" *ngIf="column.jobs.length === 0">
+            <span *ngIf="column.id === 'unassigned'">No pending jobs in queue.</span>
+            <span *ngIf="column.id !== 'unassigned'">Drag jobs here to assign this driver.</span>
+          </div>
+          <div class="job-card" *ngFor="let job of column.jobs; let i = index; trackBy: trackByJob" cdkDrag>
             <div class="job-top">
               <span class="job-seq" *ngIf="column.id !== 'unassigned'">#{{i + 1}}</span>
               <span class="job-invoice">DO {{job.invoiceNumber || job.inv_temp || job._id}}</span>
@@ -94,6 +134,9 @@
               ETA {{job.etaTime | date : 'HH:mm'}} ({{job.etaMinutes}}m)
             </div>
             <div class="job-actions">
+              <button mat-icon-button class="drag-handle" cdkDragHandle matTooltip="Drag to reorder">
+                <mat-icon>drag_indicator</mat-icon>
+              </button>
               <button mat-icon-button (click)="editJob(job._id)">
                 <mat-icon>edit</mat-icon>
               </button>

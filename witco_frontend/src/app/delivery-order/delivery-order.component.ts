@@ -126,6 +126,26 @@ export class DeliveryOrderComponent implements OnInit {
     this.recountTotalJobs();
   }
 
+  get unassignedCount(): number {
+    return (this.unassigned && this.unassigned.jobs ? this.unassigned.jobs.length : 0);
+  }
+
+  get assignedJobsCount(): number {
+    return Math.max(this.totalJobsCount - this.unassignedCount, 0);
+  }
+
+  get activeDriversCount(): number {
+    return this.columns.filter((col) => col.id !== 'unassigned' && col.jobs.length > 0).length;
+  }
+
+  trackByColumn(_: number, column: DriverColumn): string {
+    return column.id;
+  }
+
+  trackByJob(_: number, job: DispatchJob): string {
+    return job._id;
+  }
+
   applyAiSuggestions() {
     const jobIds = this.unassigned.jobs.map((job) => job._id);
     if (!jobIds.length) {
